@@ -32,12 +32,26 @@ fun NoteEditor(
     onContentChange: (String) -> Unit,
     onSave: () -> Unit,
     onStartRecording: () -> Unit,
+    onPreviewModeChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var content by remember { mutableStateOf(note.content) }
     var editorRef by remember { mutableStateOf<EditText?>(null) }
     val focusManager = LocalFocusManager.current
-    var isPreviewMode by remember { mutableStateOf(false) }
+    var isPreviewMode by remember(note.id) { mutableStateOf(note.isPreviewMode) }
+
+    // Эффект для синхронизации состояния предпросмотра
+    LaunchedEffect(isPreviewMode) {
+        if (isPreviewMode != note.isPreviewMode) {
+            onPreviewModeChange(isPreviewMode)
+        }
+    }
+
+    // Эффект для обновления состояния при смене заметки
+    LaunchedEffect(note.id, note.content) {
+        content = note.content
+        isPreviewMode = note.isPreviewMode
+    }
 
     Box(
         modifier = modifier.fillMaxSize()
@@ -135,7 +149,10 @@ fun NoteEditor(
                     
                     PreviewToggleButton(
                         isPreviewMode = isPreviewMode,
-                        onToggle = { isPreviewMode = !isPreviewMode }
+                        onToggle = { 
+                            isPreviewMode = !isPreviewMode
+                            onPreviewModeChange(isPreviewMode)
+                        }
                     )
                 }
 

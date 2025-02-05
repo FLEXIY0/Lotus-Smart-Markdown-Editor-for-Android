@@ -19,7 +19,8 @@ data class Note(
     val preview: String,
     val content: String,
     val modifiedAt: Long = System.currentTimeMillis(),
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val isPreviewMode: Boolean = false
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -41,13 +42,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (lastEditedFile != null) {
                 val content = lastEditedFile.readText()
                 val noteId = MarkdownUtils.extractNoteId(lastEditedFile)
+                val isPreviewMode = FileUtils.readNotePreviewMode(getApplication(), noteId)
                 _currentNote.value = Note(
                     id = noteId,
                     title = MarkdownUtils.extractTitle(content),
                     preview = MarkdownUtils.getPreview(content),
                     content = content,
                     modifiedAt = lastEditedFile.lastModified(),
-                    createdAt = noteId // используем id как timestamp создания
+                    createdAt = noteId,
+                    isPreviewMode = isPreviewMode
                 )
             }
         }
@@ -55,19 +58,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadNotes() {
         viewModelScope.launch(Dispatchers.IO) {
-            val files = FileUtils.getNoteFiles(getApplication())
-            val notesList = files.map { file ->
-                val content = file.readText()
-                Note(
-                    id = MarkdownUtils.extractNoteId(file),
-                    title = MarkdownUtils.extractTitle(content),
-                    preview = MarkdownUtils.getPreview(content),
-                    content = content,
-                    modifiedAt = file.lastModified(),
-                    createdAt = MarkdownUtils.extractNoteId(file)
-                )
+            try {
+                val files = FileUtils.getNoteFiles(getApplication())
+                val notesList = files.mapNotNull { file ->
+                    try {
+                        val content = file.readText()
+                        if (content.isNotEmpty()) {
+                            val noteId = MarkdownUtils.extractNoteId(file)
+                            val isPreviewMode = FileUtils.readNotePreviewMode(getApplication(), noteId)
+                            Note(
+                                id = noteId,
+                                title = MarkdownUtils.extractTitle(content),
+                                preview = MarkdownUtils.getPreview(content),
+                                content = content,
+                                modifiedAt = file.lastModified(),
+                                createdAt = noteId,
+                                isPreviewMode = isPreviewMode
+                            )
+                        } else {
+                            null
+                        }
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+                _notes.value = notesList
+            } catch (e: Exception) {
+                // Если произошла ошибка при загрузке списка, сохраняем текущий список
             }
-            _notes.value = notesList
         }
     }
 
@@ -81,10 +99,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
+    fun updatePreviewMode(isPreviewMode: Boolean) {
+        val currentNote = _currentNote.value
+        _currentNote.value = currentNote.copy(isPreviewMode = isPreviewMode)
+        viewModelScope.launch(Dispatchers.IO) {
+            FileUtils.saveNotePreviewMode(getApplication(), currentNote.id, isPreviewMode)
+        }
+    }
+
     fun saveNote() {
         viewModelScope.launch(Dispatchers.IO) {
             val note = _currentNote.value
             FileUtils.saveNote(getApplication(), note.id, note.content)
+            FileUtils.saveNotePreviewMode(getApplication(), note.id, note.isPreviewMode)
             loadNotes()
         }
     }
@@ -94,28 +121,52 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val file = FileUtils.createNoteFile(getApplication())
             val noteId = MarkdownUtils.extractNoteId(file)
             val now = System.currentTimeMillis()
-            _currentNote.value = Note(noteId, "Без названия", "", "", now, now)
+            _currentNote.value = Note(noteId, "Без названия", "", "", now, now, false)
         }
     }
 
     fun loadNote(noteId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            val content = FileUtils.readNoteContent(getApplication(), noteId)
-            val file = File(FileUtils.getNotesDirectory(getApplication()), "$noteId.md")
-            _currentNote.value = Note(
-                id = noteId,
-                title = MarkdownUtils.extractTitle(content),
-                preview = MarkdownUtils.getPreview(content),
-                content = content,
-                modifiedAt = file.lastModified(),
-                createdAt = noteId
-            )
+            try {
+                val content = FileUtils.readNoteContent(getApplication(), noteId)
+                if (content.isEmpty()) {
+                    // Если содержимое пустое, попробуем найти заметку в списке
+                    val existingNote = _notes.value.find { it.id == noteId }
+                    if (existingNote != null) {
+                        _currentNote.value = existingNote
+                        // Сохраняем содержимое на диск
+                        FileUtils.saveNote(getApplication(), noteId, existingNote.content)
+                        return@launch
+                    }
+                }
+
+                val file = File(FileUtils.getNotesDirectory(getApplication()), "$noteId.md")
+                val isPreviewMode = FileUtils.readNotePreviewMode(getApplication(), noteId)
+                _currentNote.value = Note(
+                    id = noteId,
+                    title = MarkdownUtils.extractTitle(content),
+                    preview = MarkdownUtils.getPreview(content),
+                    content = content,
+                    modifiedAt = file.lastModified(),
+                    createdAt = noteId,
+                    isPreviewMode = isPreviewMode
+                )
+            } catch (e: Exception) {
+                // В случае ошибки, попробуем загрузить из кэша
+                val existingNote = _notes.value.find { it.id == noteId }
+                if (existingNote != null) {
+                    _currentNote.value = existingNote
+                    // Сохраняем содержимое на диск
+                    FileUtils.saveNote(getApplication(), noteId, existingNote.content)
+                }
+            }
         }
     }
 
     fun deleteNote(noteId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             FileUtils.deleteNote(getApplication(), noteId)
+            FileUtils.deleteNotePreviewMode(getApplication(), noteId)
             loadNotes()
         }
     }

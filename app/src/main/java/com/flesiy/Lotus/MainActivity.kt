@@ -167,6 +167,9 @@ fun LotusApp() {
                         },
                         onStartRecording = {
                             // TODO: Implement speech recognition
+                        },
+                        onPreviewModeChange = { isPreviewMode ->
+                            viewModel.updatePreviewMode(isPreviewMode)
                         }
                     )
                 }
