@@ -6,6 +6,7 @@ import java.io.File
 object FileUtils {
     private const val NOTES_DIRECTORY = "notes"
     private const val PREVIEW_MODE_DIRECTORY = "preview_mode"
+    private const val LAST_VIEWED_NOTE_FILE = "last_viewed_note"
 
     fun getNotesDirectory(context: Context): File {
         val directory = File(context.filesDir, NOTES_DIRECTORY)
@@ -75,6 +76,24 @@ object FileUtils {
         val file = File(directory, "$noteId.preview")
         if (file.exists()) {
             file.delete()
+        }
+    }
+
+    fun saveLastViewedNoteId(context: Context, noteId: Long) {
+        val file = File(context.filesDir, LAST_VIEWED_NOTE_FILE)
+        file.writeText(noteId.toString())
+    }
+
+    fun getLastViewedNoteId(context: Context): Long? {
+        val file = File(context.filesDir, LAST_VIEWED_NOTE_FILE)
+        return if (file.exists()) {
+            try {
+                file.readText().toLong()
+            } catch (e: Exception) {
+                null
+            }
+        } else {
+            null
         }
     }
 } 

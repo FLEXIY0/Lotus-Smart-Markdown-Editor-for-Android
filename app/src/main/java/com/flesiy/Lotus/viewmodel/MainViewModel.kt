@@ -32,26 +32,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         loadNotes()
-        loadLastEditedNote()
+        loadLastViewedNote()
     }
 
-    private fun loadLastEditedNote() {
+    private fun loadLastViewedNote() {
         viewModelScope.launch(Dispatchers.IO) {
-            val files = FileUtils.getNoteFiles(getApplication())
-            val lastEditedFile = files.maxByOrNull { it.lastModified() }
-            if (lastEditedFile != null) {
-                val content = lastEditedFile.readText()
-                val noteId = MarkdownUtils.extractNoteId(lastEditedFile)
-                val isPreviewMode = FileUtils.readNotePreviewMode(getApplication(), noteId)
-                _currentNote.value = Note(
-                    id = noteId,
-                    title = MarkdownUtils.extractTitle(content),
-                    preview = MarkdownUtils.getPreview(content),
-                    content = content,
-                    modifiedAt = lastEditedFile.lastModified(),
-                    createdAt = noteId,
-                    isPreviewMode = isPreviewMode
-                )
+            val lastViewedNoteId = FileUtils.getLastViewedNoteId(getApplication())
+            if (lastViewedNoteId != null) {
+                loadNote(lastViewedNoteId)
+            } else {
+                // Если нет сохраненной последней просмотренной заметки,
+                // загружаем последнюю редактированную как запасной вариант
+                val files = FileUtils.getNoteFiles(getApplication())
+                val lastEditedFile = files.maxByOrNull { it.lastModified() }
+                if (lastEditedFile != null) {
+                    val noteId = MarkdownUtils.extractNoteId(lastEditedFile)
+                    loadNote(noteId)
+                }
             }
         }
     }
@@ -122,6 +119,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val noteId = MarkdownUtils.extractNoteId(file)
             val now = System.currentTimeMillis()
             _currentNote.value = Note(noteId, "Без названия", "", "", now, now, false)
+            // Сохраняем новую заметку как последнюю просмотренную
+            FileUtils.saveLastViewedNoteId(getApplication(), noteId)
         }
     }
 
@@ -136,21 +135,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         _currentNote.value = existingNote
                         // Сохраняем содержимое на диск
                         FileUtils.saveNote(getApplication(), noteId, existingNote.content)
-                        return@launch
                     }
+                } else {
+                    val file = File(FileUtils.getNotesDirectory(getApplication()), "$noteId.md")
+                    val isPreviewMode = FileUtils.readNotePreviewMode(getApplication(), noteId)
+                    _currentNote.value = Note(
+                        id = noteId,
+                        title = MarkdownUtils.extractTitle(content),
+                        preview = MarkdownUtils.getPreview(content),
+                        content = content,
+                        modifiedAt = file.lastModified(),
+                        createdAt = noteId,
+                        isPreviewMode = isPreviewMode
+                    )
                 }
-
-                val file = File(FileUtils.getNotesDirectory(getApplication()), "$noteId.md")
-                val isPreviewMode = FileUtils.readNotePreviewMode(getApplication(), noteId)
-                _currentNote.value = Note(
-                    id = noteId,
-                    title = MarkdownUtils.extractTitle(content),
-                    preview = MarkdownUtils.getPreview(content),
-                    content = content,
-                    modifiedAt = file.lastModified(),
-                    createdAt = noteId,
-                    isPreviewMode = isPreviewMode
-                )
+                // Сохраняем ID просматриваемой заметки
+                FileUtils.saveLastViewedNoteId(getApplication(), noteId)
             } catch (e: Exception) {
                 // В случае ошибки, попробуем загрузить из кэша
                 val existingNote = _notes.value.find { it.id == noteId }
@@ -158,6 +158,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _currentNote.value = existingNote
                     // Сохраняем содержимое на диск
                     FileUtils.saveNote(getApplication(), noteId, existingNote.content)
+                    // Сохраняем ID просматриваемой заметки
+                    FileUtils.saveLastViewedNoteId(getApplication(), noteId)
                 }
             }
         }
@@ -167,6 +169,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             FileUtils.deleteNote(getApplication(), noteId)
             FileUtils.deleteNotePreviewMode(getApplication(), noteId)
+            
+            // Если удаляем текущую заметку, загружаем другую
+            if (currentNote.value.id == noteId) {
+                val files = FileUtils.getNoteFiles(getApplication())
+                val nextNote = files.firstOrNull()
+                if (nextNote != null) {
+                    val nextNoteId = MarkdownUtils.extractNoteId(nextNote)
+                    loadNote(nextNoteId)
+                } else {
+                    // Если заметок больше нет, создаем новую
+                    createNewNote()
+                }
+            }
+            
             loadNotes()
         }
     }
