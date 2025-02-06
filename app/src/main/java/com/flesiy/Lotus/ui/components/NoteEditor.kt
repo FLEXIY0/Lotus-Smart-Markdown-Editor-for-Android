@@ -5,7 +5,8 @@ import android.widget.EditText
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Save
@@ -13,6 +14,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontFamily
@@ -23,8 +27,35 @@ import java.text.SimpleDateFormat
 import java.util.*
 import com.flesiy.Lotus.ui.components.markdown.AnimatedMarkdownContent
 import com.flesiy.Lotus.ui.components.markdown.PreviewToggleButton
+import androidx.compose.foundation.ScrollState
 
 private const val TAG = "NoteEditor"
+
+@Composable
+private fun Modifier.drawScrollbar(
+    state: ScrollState,
+    color: Color
+): Modifier = drawWithContent {
+    drawContent()
+    
+    val scrollMaxValue = state.maxValue.toFloat()
+    if (scrollMaxValue > 0) {
+        val scrollValue = state.value.toFloat()
+        val scrollPercent = scrollValue / scrollMaxValue
+        
+        val height = size.height
+        val thumbHeight = 32.dp.toPx() // Фиксированная высота ползунка
+        val maxOffset = height - thumbHeight
+        val thumbOffset = (scrollPercent * maxOffset).coerceIn(0f, maxOffset)
+        
+        // Рисуем только ползунок
+        drawRect(
+            color = color.copy(alpha = 0.5f),
+            topLeft = Offset(size.width - 4.dp.toPx(), thumbOffset),
+            size = Size(4.dp.toPx(), thumbHeight)
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +71,7 @@ fun NoteEditor(
     var editorRef by remember { mutableStateOf<EditText?>(null) }
     val focusManager = LocalFocusManager.current
     var isPreviewMode by remember(note.id) { mutableStateOf(note.isPreviewMode) }
+    val scrollState = rememberScrollState()
 
     // Эффект для синхронизации состояния предпросмотра
     LaunchedEffect(isPreviewMode) {
@@ -67,8 +99,7 @@ fun NoteEditor(
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -153,46 +184,46 @@ fun NoteEditor(
             }
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 0.dp,
-                top = paddingValues.calculateTopPadding(),
-                end = 0.dp,
-                bottom = paddingValues.calculateBottomPadding()
-            )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(end = 4.dp)
+                .verticalScroll(scrollState)
+                .drawScrollbar(
+                    state = scrollState,
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Редактор
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .defaultMinSize(minHeight = 400.dp)
-                        .padding(horizontal = 16.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            enabled = !isPreviewMode
-                        ) {
-                            Log.d(TAG, "Editor area clicked")
-                            editorRef?.requestFocus()
-                        }
-                ) {
-                    AnimatedMarkdownContent(
-                        content = content,
-                        onContentChange = { newValue ->
-                            Log.d(TAG, "Content changed: $newValue")
-                            content = newValue
-                            onContentChange(newValue)
-                        },
-                        isPreviewMode = isPreviewMode,
-                        modifier = Modifier.fillMaxWidth(),
-                        hint = "Соберитесь с мыслями...",
-                        onEditorCreated = { editor ->
-                            editorRef = editor
-                        }
-                    )
-                }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = 400.dp)
+                    .padding(horizontal = 16.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        enabled = !isPreviewMode
+                    ) {
+                        Log.d(TAG, "Editor area clicked")
+                        editorRef?.requestFocus()
+                    }
+            ) {
+                AnimatedMarkdownContent(
+                    content = content,
+                    onContentChange = { newValue ->
+                        Log.d(TAG, "Content changed: $newValue")
+                        content = newValue
+                        onContentChange(newValue)
+                    },
+                    isPreviewMode = isPreviewMode,
+                    modifier = Modifier.fillMaxWidth(),
+                    hint = "Соберитесь с мыслями...",
+                    onEditorCreated = { editor ->
+                        editorRef = editor
+                    }
+                )
             }
         }
     }

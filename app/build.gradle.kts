@@ -110,6 +110,9 @@ dependencies {
     implementation("io.coil-kt:coil-gif:2.5.0")
     implementation("io.coil-kt:coil-video:2.5.0")
     
+    // Accompanist
+    implementation("com.google.accompanist:accompanist-systemuicontroller:0.34.0")
+    
     // Тестирование
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
