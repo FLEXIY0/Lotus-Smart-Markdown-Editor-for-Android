@@ -1,0 +1,212 @@
+package com.flesiy.Lotus.ui.components
+
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.flesiy.Lotus.data.TrashManager
+import com.flesiy.Lotus.data.TrashNote
+import java.text.SimpleDateFormat
+import java.util.*
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TrashScreen(
+    notes: List<TrashNote>,
+    currentRetentionPeriod: TrashManager.RetentionPeriod,
+    trashSize: Long,
+    isOverLimit: Boolean,
+    onRetentionPeriodChange: (TrashManager.RetentionPeriod) -> Unit,
+    onRestoreNote: (Long) -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Корзина") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, "Назад")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            // Информация о корзине
+            TrashInfo(
+                trashSize = trashSize,
+                isOverLimit = isOverLimit,
+                currentRetentionPeriod = currentRetentionPeriod,
+                onRetentionPeriodChange = onRetentionPeriodChange
+            )
+
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // Список удаленных заметок
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                items(notes) { note ->
+                    TrashNoteItem(
+                        note = note,
+                        retentionPeriod = currentRetentionPeriod,
+                        onRestore = { onRestoreNote(note.id) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrashInfo(
+    trashSize: Long,
+    isOverLimit: Boolean,
+    currentRetentionPeriod: TrashManager.RetentionPeriod,
+    onRetentionPeriodChange: (TrashManager.RetentionPeriod) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Размер корзины
+        Column {
+            Text(
+                text = "Занято места:",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = formatSize(trashSize),
+                style = MaterialTheme.typography.titleMedium,
+                color = if (isOverLimit) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        // Период хранения
+        Button(
+            onClick = {
+                val periods = TrashManager.RetentionPeriod.values()
+                val currentIndex = periods.indexOf(currentRetentionPeriod)
+                val nextIndex = (currentIndex + 1) % periods.size
+                onRetentionPeriodChange(periods[nextIndex])
+            }
+        ) {
+            Text(currentRetentionPeriod.displayName)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TrashNoteItem(
+    note: TrashNote,
+    retentionPeriod: TrashManager.RetentionPeriod,
+    onRestore: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = note.title,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = formatDeletionDate(note.deletionTime),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (retentionPeriod != TrashManager.RetentionPeriod.NEVER) {
+                        Text(
+                            text = "Будет удалено через ${getRemainingDays(note.deletionTime, retentionPeriod)} дн.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+
+                Row {
+                    IconButton(onClick = { expanded = !expanded }) {
+                        Icon(
+                            if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (expanded) "Свернуть" else "Развернуть"
+                        )
+                    }
+                    IconButton(onClick = onRestore) {
+                        Icon(
+                            Icons.Default.Restore,
+                            contentDescription = "Восстановить",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Text(
+                    text = note.content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 8.dp),
+                    maxLines = 10,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+private fun formatSize(bytes: Long): String {
+    return when {
+        bytes < 1024 -> "$bytes B"
+        bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+        else -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
+    }
+}
+
+private fun formatDeletionDate(timestamp: Long): String {
+    val sdf = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+    return "Удалено: ${sdf.format(Date(timestamp))}"
+}
+
+private fun getRemainingDays(deletionTime: Long, retentionPeriod: TrashManager.RetentionPeriod): Int {
+    if (retentionPeriod == TrashManager.RetentionPeriod.NEVER) return -1
+    val currentTime = System.currentTimeMillis()
+    val retentionMillis = retentionPeriod.days * 24 * 60 * 60 * 1000L
+    val remainingMillis = (deletionTime + retentionMillis) - currentTime
+    return (remainingMillis / (24 * 60 * 60 * 1000L)).toInt()
+} 

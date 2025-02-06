@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.flesiy.Lotus.data.UserPreferences
+import com.flesiy.Lotus.data.TrashManager
+import com.flesiy.Lotus.data.TrashNote
 import com.flesiy.Lotus.utils.FileUtils
 import com.flesiy.Lotus.utils.MarkdownUtils
 import kotlinx.coroutines.Dispatchers
@@ -34,15 +36,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val currentNote: StateFlow<Note> = _currentNote
 
     private val userPreferences = UserPreferences(application)
+    private val trashManager = TrashManager(application)
+
     val skipDeleteConfirmation = userPreferences.skipDeleteConfirmation.stateIn(
         viewModelScope,
-         SharingStarted.WhileSubscribed(5000),
+        SharingStarted.WhileSubscribed(5000),
         false
     )
+
+    private val _trashNotes = MutableStateFlow<List<TrashNote>>(emptyList())
+    val trashNotes: StateFlow<List<TrashNote>> = _trashNotes
+
+    private val _trashSize = MutableStateFlow(0L)
+    val trashSize: StateFlow<Long> = _trashSize
+
+    private val _isTrashOverLimit = MutableStateFlow(false)
+    val isTrashOverLimit: StateFlow<Boolean> = _isTrashOverLimit
+
+    private val _currentRetentionPeriod = MutableStateFlow(TrashManager.RetentionPeriod.ONE_WEEK)
+    val currentRetentionPeriod: StateFlow<TrashManager.RetentionPeriod> = _currentRetentionPeriod
 
     init {
         loadNotes()
         loadLastViewedNote()
+        loadTrashInfo()
+        loadRetentionPeriod()
     }
 
     private fun loadLastViewedNote() {
@@ -93,6 +111,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 // Если произошла ошибка при загрузке списка, сохраняем текущий список
             }
+        }
+    }
+
+    private fun loadTrashInfo() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _trashNotes.value = trashManager.getTrashNotes()
+            _trashSize.value = trashManager.getTrashSize()
+            _isTrashOverLimit.value = trashManager.isTrashOverLimit()
+            trashManager.cleanupExpiredNotes()
+        }
+    }
+
+    private fun loadRetentionPeriod() {
+        viewModelScope.launch {
+            _currentRetentionPeriod.value = userPreferences.getTrashRetentionPeriod()
         }
     }
 
@@ -177,29 +210,52 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deleteNote(noteId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            FileUtils.deleteNote(getApplication(), noteId)
-            FileUtils.deleteNotePreviewMode(getApplication(), noteId)
-            
-            // Если удаляем текущую заметку, загружаем другую
-            if (currentNote.value.id == noteId) {
-                val files = FileUtils.getNoteFiles(getApplication())
-                val nextNote = files.firstOrNull()
-                if (nextNote != null) {
-                    val nextNoteId = MarkdownUtils.extractNoteId(nextNote)
-                    loadNote(nextNoteId)
-                } else {
-                    // Если заметок больше нет, создаем новую
-                    createNewNote()
+            val note = _notes.value.find { it.id == noteId }
+            if (note != null) {
+                trashManager.moveToTrash(noteId, note.content)
+                FileUtils.deleteNote(getApplication(), noteId)
+                FileUtils.deleteNotePreviewMode(getApplication(), noteId)
+                
+                // Если удаляем текущую заметку, загружаем другую
+                if (currentNote.value.id == noteId) {
+                    val files = FileUtils.getNoteFiles(getApplication())
+                    val nextNote = files.firstOrNull()
+                    if (nextNote != null) {
+                        val nextNoteId = MarkdownUtils.extractNoteId(nextNote)
+                        loadNote(nextNoteId)
+                    } else {
+                        createNewNote()
+                    }
                 }
+                
+                loadNotes()
+                loadTrashInfo()
             }
-            
-            loadNotes()
+        }
+    }
+
+    fun restoreNote(noteId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val content = trashManager.restoreFromTrash(noteId)
+            if (content != null) {
+                FileUtils.saveNote(getApplication(), noteId, content)
+                loadNotes()
+                loadTrashInfo()
+            }
         }
     }
 
     fun setSkipDeleteConfirmation(skip: Boolean) {
         viewModelScope.launch {
             userPreferences.setSkipDeleteConfirmation(skip)
+        }
+    }
+
+    fun setRetentionPeriod(period: TrashManager.RetentionPeriod) {
+        viewModelScope.launch {
+            userPreferences.setTrashRetentionPeriod(period)
+            _currentRetentionPeriod.value = period
+            loadTrashInfo() // Обновляем информацию о корзине
         }
     }
 } 
