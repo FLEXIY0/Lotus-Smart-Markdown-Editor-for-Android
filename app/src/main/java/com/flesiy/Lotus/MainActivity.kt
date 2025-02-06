@@ -60,7 +60,11 @@ fun LotusApp() {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet {
+            ModalDrawerSheet(
+                modifier = Modifier.width(300.dp),
+                drawerContainerColor = MaterialTheme.colorScheme.surface,
+                drawerContentColor = MaterialTheme.colorScheme.onSurface
+            ) {
                 Column(
                     modifier = Modifier.fillMaxHeight()
                 ) {

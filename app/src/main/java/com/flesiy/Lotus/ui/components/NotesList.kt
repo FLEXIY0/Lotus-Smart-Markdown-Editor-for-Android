@@ -1,9 +1,9 @@
 package com.flesiy.Lotus.ui.components
 
 import androidx.compose.animation.*
-import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.*
@@ -27,6 +27,13 @@ import org.burnoutcrew.reorderable.*
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.abs
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+private enum class SwipeAction {
+    PIN, DELETE
+}
 
 private fun Modifier.draggedItem(isDragging: Boolean): Modifier = this.then(
     Modifier.graphicsLayer {
@@ -161,13 +168,66 @@ private fun NoteItem(
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var offsetX by remember { mutableStateOf(0f) }
-    val swipeThreshold = 150f // Увеличиваем порог для предотвращения случайных свайпов
+    val swipeThreshold = 150f
+    val maxSwipe = 200f
+    val flyAwayDistance = 2000f
+    var isAnimatingSwipe by remember { mutableStateOf(false) }
+    var targetAction: SwipeAction? by remember { mutableStateOf(null) }
+    var velocityX by remember { mutableStateOf(0f) }
+
     val animatedOffset = animateFloatAsState(
-        targetValue = offsetX,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        )
+        targetValue = when (targetAction) {
+            SwipeAction.PIN -> if (isAnimatingSwipe) -flyAwayDistance else offsetX
+            SwipeAction.DELETE -> if (isAnimatingSwipe) maxSwipe else offsetX
+            null -> offsetX
+        },
+        animationSpec = when (targetAction) {
+            SwipeAction.PIN -> tween(
+                // Регулируем скорость анимации в зависимости от скорости свайпа
+                durationMillis = if (abs(velocityX) > 3000) 200 else 400,
+                easing = FastOutSlowInEasing
+            )
+            SwipeAction.DELETE -> tween(
+                durationMillis = 200,
+                easing = FastOutSlowInEasing
+            )
+            null -> tween(
+                durationMillis = 200,
+                easing = FastOutSlowInEasing
+            )
+        },
+        finishedListener = {
+            if (isAnimatingSwipe) {
+                when (targetAction) {
+                    SwipeAction.PIN -> {
+                        onNotePinned(note.id)
+                        // Сбрасываем состояние только после завершения анимации
+                        MainScope().launch {
+                            delay(50)
+                            offsetX = 0f
+                            isAnimatingSwipe = false
+                            targetAction = null
+                            velocityX = 0f
+                        }
+                    }
+                    SwipeAction.DELETE -> {
+                        if (skipDeleteConfirmation) {
+                            onNoteDelete(note.id)
+                        } else {
+                            showDeleteDialog = true
+                        }
+                        MainScope().launch {
+                            delay(50)
+                            offsetX = 0f
+                            isAnimatingSwipe = false
+                            targetAction = null
+                            velocityX = 0f
+                        }
+                    }
+                    null -> {}
+                }
+            }
+        }
     )
 
     Box(
@@ -175,66 +235,91 @@ private fun NoteItem(
             .draggable(
                 orientation = Orientation.Horizontal,
                 state = rememberDraggableState { delta ->
-                    // Замедляем движение свайпа
-                    offsetX = (offsetX + delta * 0.7f).coerceIn(-200f, 200f)
+                    if (!isAnimatingSwipe) {
+                        // Сглаживаем движение при быстром свайпе
+                        val smoothDelta = delta * 0.8f
+                        offsetX = (offsetX + smoothDelta).coerceIn(-maxSwipe, maxSwipe)
+                        velocityX = delta
+                    }
                 },
-                onDragStopped = {
+                onDragStopped = { velocity ->
+                    velocityX = velocity
                     when {
-                        offsetX < -swipeThreshold -> {
-                            onNotePinned(note.id)
-                            offsetX = 0f
+                        // Учитываем скорость свайпа при определении действия
+                        offsetX < -swipeThreshold || velocity < -2000 -> {
+                            isAnimatingSwipe = true
+                            targetAction = SwipeAction.PIN
                         }
-                        offsetX > swipeThreshold -> {
-                            if (skipDeleteConfirmation) {
-                                onNoteDelete(note.id)
-                            } else {
-                                showDeleteDialog = true
-                            }
-                            offsetX = 0f
+                        offsetX > swipeThreshold || velocity > 2000 -> {
+                            isAnimatingSwipe = true
+                            targetAction = SwipeAction.DELETE
                         }
                         else -> {
-                            // Плавно возвращаем на место
                             offsetX = 0f
+                            velocityX = 0f
                         }
                     }
                 }
             )
     ) {
-        // Фон для свайпа с плавным появлением
+        // Фон для свайпа
         Box(
             modifier = Modifier
                 .matchParentSize()
                 .background(
                     when {
-                        offsetX > 0 -> MaterialTheme.colorScheme.error
-                            .copy(alpha = (offsetX / swipeThreshold).coerceIn(0f, 1f) * 0.7f)
-                        offsetX < 0 -> MaterialTheme.colorScheme.primary
-                            .copy(alpha = (-offsetX / swipeThreshold).coerceIn(0f, 1f) * 0.7f)
+                        // Показываем фон только при активном свайпе или анимации вылета
+                        isAnimatingSwipe && targetAction != null -> when (targetAction) {
+                            SwipeAction.DELETE -> MaterialTheme.colorScheme.error
+                            SwipeAction.PIN -> MaterialTheme.colorScheme.primary
+                            null -> Color.Transparent
+                        }
+                        // При обычном свайпе
+                        !isAnimatingSwipe && abs(offsetX) > 0f -> when {
+                            offsetX > 0 -> MaterialTheme.colorScheme.error.copy(
+                                alpha = (abs(offsetX) / swipeThreshold).coerceIn(0f, 1f) * 0.7f
+                            )
+                            offsetX < 0 -> MaterialTheme.colorScheme.primary.copy(
+                                alpha = (abs(offsetX) / swipeThreshold).coerceIn(0f, 1f) * 0.7f
+                            )
+                            else -> Color.Transparent
+                        }
                         else -> Color.Transparent
                     }
                 ),
             contentAlignment = when {
+                isAnimatingSwipe && targetAction != null -> when (targetAction) {
+                    SwipeAction.DELETE -> Alignment.CenterStart
+                    SwipeAction.PIN -> Alignment.CenterEnd
+                    null -> Alignment.Center
+                }
                 offsetX > 0 -> Alignment.CenterStart
                 else -> Alignment.CenterEnd
             }
         ) {
             // Иконка с плавным появлением
-            if (abs(offsetX) > 20f) { // Показываем иконку только при заметном свайпе
+            if ((abs(offsetX) > 20f && !isAnimatingSwipe) || (isAnimatingSwipe && targetAction != null)) {
                 Icon(
                     imageVector = when {
+                        isAnimatingSwipe && targetAction != null -> when (targetAction) {
+                            SwipeAction.DELETE -> Icons.Default.Delete
+                            SwipeAction.PIN -> Icons.Default.PushPin
+                            null -> Icons.Default.Delete
+                        }
                         offsetX > 0 -> Icons.Default.Delete
                         else -> Icons.Default.PushPin
                     },
                     contentDescription = null,
                     tint = Color.White.copy(
-                        alpha = (abs(offsetX) / swipeThreshold).coerceIn(0f, 1f)
+                        alpha = if (abs(offsetX) > swipeThreshold || (isAnimatingSwipe && targetAction != null)) 1f 
+                               else (abs(offsetX) / swipeThreshold).coerceIn(0f, 1f)
                     ),
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
             }
         }
 
-        // Основной контент с плавной анимацией
+        // Основной контент
         Card(
             modifier = modifier
                 .offset { IntOffset(animatedOffset.value.toInt(), 0) }
