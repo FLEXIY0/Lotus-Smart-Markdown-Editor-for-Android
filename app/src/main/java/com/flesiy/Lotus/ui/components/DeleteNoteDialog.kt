@@ -20,7 +20,7 @@ fun DeleteNoteDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Удалить заметку?",
+                text = "Перенести в корзину?",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -28,7 +28,7 @@ fun DeleteNoteDialog(
         text = {
             Column {
                 Text(
-                    text = "Вы уверены, что хотите удалить заметку \"$noteTitle\"? Это действие нельзя отменить.",
+                    text = "Вы уверены, что хотите перенести заметку \"$noteTitle\" в корзину?",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -53,7 +53,7 @@ fun DeleteNoteDialog(
                     containerColor = MaterialTheme.colorScheme.error
                 )
             ) {
-                Text("Удалить")
+                Text("Перенести")
             }
         },
         dismissButton = {

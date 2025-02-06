@@ -110,6 +110,12 @@ private fun NoteItem(
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
+                Text(
+                    text = "Создано: ${formatDate(note.createdAt)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(top = 4.dp)
+                )
             }
 
             IconButton(onClick = onDelete) {

@@ -61,55 +61,116 @@ fun LotusApp() {
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                Spacer(modifier = Modifier.height(12.dp))
-                Column {
-                    NotesList(
-                        notes = notes,
-                        onNoteClick = { noteId ->
-                            viewModel.loadNote(noteId)
-                            scope.launch {
-                                drawerState.close()
+                Column(
+                    modifier = Modifier.fillMaxHeight()
+                ) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    // Список заметок в скроллируемом контейнере
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) {
+                        NotesList(
+                            notes = notes,
+                            onNoteClick = { noteId ->
+                                viewModel.loadNote(noteId)
+                                scope.launch {
+                                    drawerState.close()
+                                }
+                                navController.navigate("editor")
+                            },
+                            onNoteDelete = { noteId ->
+                                viewModel.deleteNote(noteId)
+                            },
+                            skipDeleteConfirmation = viewModel.skipDeleteConfirmation.collectAsState().value,
+                            onSkipDeleteConfirmationChange = { skip ->
+                                viewModel.setSkipDeleteConfirmation(skip)
                             }
-                            navController.navigate("editor")
-                        },
-                        onNoteDelete = { noteId ->
-                            viewModel.deleteNote(noteId)
-                        },
-                        skipDeleteConfirmation = viewModel.skipDeleteConfirmation.collectAsState().value,
-                        onSkipDeleteConfirmationChange = { skip ->
-                            viewModel.setSkipDeleteConfirmation(skip)
-                        }
-                    )
+                        )
+                    }
                     
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
-                    
-                    // Кнопка корзины
-                    ListItem(
-                        headlineContent = { Text("Корзина") },
-                        leadingContent = {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = "Корзина",
-                                tint = if (isTrashOverLimit) MaterialTheme.colorScheme.error 
-                                      else MaterialTheme.colorScheme.onSurface
-                            )
-                        },
-                        trailingContent = if (trashSize > 0) {
-                            {
+                    // Фиксированная нижняя часть
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    ) {
+                        Divider()
+                        
+                        // Кнопка корзины
+                        ListItem(
+                            headlineContent = { Text("Корзина") },
+                            leadingContent = {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Корзина",
+                                    tint = if (isTrashOverLimit) MaterialTheme.colorScheme.error 
+                                          else MaterialTheme.colorScheme.onSurface
+                                )
+                            },
+                            trailingContent = if (trashSize > 0) {
+                                {
+                                    Text(
+                                        text = when {
+                                            trashSize < 1024 -> "$trashSize B"
+                                            trashSize < 1024 * 1024 -> String.format("%.1f KB", trashSize / 1024.0)
+                                            else -> String.format("%.1f MB", trashSize / (1024.0 * 1024.0))
+                                        },
+                                        color = if (isTrashOverLimit) MaterialTheme.colorScheme.error 
+                                               else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            } else null,
+                            modifier = Modifier.clickable {
+                                scope.launch {
+                                    drawerState.close()
+                                }
+                                navController.navigate("trash")
+                            }
+                        )
+                        
+                        Divider()
+                        
+                        // Информация о ресурсах
+                        ListItem(
+                            headlineContent = { 
                                 Text(
-                                    text = String.format("%.1f MB", trashSize / (1024.0 * 1024.0)),
-                                    color = if (isTrashOverLimit) MaterialTheme.colorScheme.error 
-                                           else MaterialTheme.colorScheme.onSurfaceVariant
+                                    "Использование памяти",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            },
+                            supportingContent = {
+                                Column {
+                                    val notesSize = viewModel.totalNotesSize.collectAsState().value
+                                    val memoryUsage = viewModel.appMemoryUsage.collectAsState().value
+                                    Text(
+                                        text = "Заметки: " + when {
+                                            notesSize < 1024 -> "$notesSize B"
+                                            notesSize < 1024 * 1024 -> String.format("%.1f KB", notesSize / 1024.0)
+                                            else -> String.format("%.1f MB", notesSize / (1024.0 * 1024.0))
+                                        },
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Text(
+                                        text = "ОЗУ: " + when {
+                                            memoryUsage < 1024 -> "$memoryUsage B"
+                                            memoryUsage < 1024 * 1024 -> String.format("%.1f KB", memoryUsage / 1024.0)
+                                            else -> String.format("%.1f MB", memoryUsage / (1024.0 * 1024.0))
+                                        },
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            },
+                            leadingContent = {
+                                Icon(
+                                    Icons.Default.Storage,
+                                    contentDescription = "Использование памяти"
                                 )
                             }
-                        } else null,
-                        modifier = Modifier.clickable {
-                            scope.launch {
-                                drawerState.close()
-                            }
-                            navController.navigate("trash")
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -125,7 +186,7 @@ fun LotusApp() {
                 Scaffold(
                     topBar = {
                         TopAppBar(
-                            title = { Text(currentNote.title.ifEmpty { "Без названия" }) },
+                            title = { Text("Lotus") },
                             navigationIcon = {
                                 IconButton(onClick = {
                                     scope.launch {
@@ -178,6 +239,12 @@ fun LotusApp() {
                     },
                     onRestoreNote = { noteId ->
                         viewModel.restoreNote(noteId)
+                    },
+                    onDeleteNote = { noteId ->
+                        viewModel.deleteNoteFromTrash(noteId)
+                    },
+                    onClearTrash = {
+                        viewModel.clearTrash()
                     },
                     onBack = {
                         navController.popBackStack()

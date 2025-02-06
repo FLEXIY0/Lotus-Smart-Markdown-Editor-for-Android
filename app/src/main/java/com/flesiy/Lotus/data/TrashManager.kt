@@ -92,6 +92,38 @@ class TrashManager(private val context: Context) {
             }
         }
     }
+
+    suspend fun deleteNoteFromTrash(noteId: Long) {
+        val file = File(getTrashDirectory(), "${noteId}.md")
+        if (file.exists()) {
+            file.delete()
+            userPreferences.removeNoteDeletionTime(noteId)
+        }
+    }
+
+    suspend fun clearTrash() {
+        getTrashDirectory().listFiles()?.forEach { file ->
+            file.delete()
+            val noteId = file.nameWithoutExtension.toLong()
+            userPreferences.removeNoteDeletionTime(noteId)
+        }
+    }
+
+    fun getTotalNotesSize(): Long {
+        val notesDir = File(context.filesDir, "notes")
+        return if (notesDir.exists()) {
+            notesDir.walkTopDown()
+                .filter { it.isFile }
+                .sumOf { it.length() }
+        } else {
+            0L
+        }
+    }
+
+    fun getAppMemoryUsage(): Long {
+        val runtime = Runtime.getRuntime()
+        return runtime.totalMemory() - runtime.freeMemory()
+    }
 }
 
 data class TrashNote(

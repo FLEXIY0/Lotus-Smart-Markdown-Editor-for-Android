@@ -56,11 +56,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentRetentionPeriod = MutableStateFlow(TrashManager.RetentionPeriod.ONE_WEEK)
     val currentRetentionPeriod: StateFlow<TrashManager.RetentionPeriod> = _currentRetentionPeriod
 
+    private val _totalNotesSize = MutableStateFlow(0L)
+    val totalNotesSize: StateFlow<Long> = _totalNotesSize
+
+    private val _appMemoryUsage = MutableStateFlow(0L)
+    val appMemoryUsage: StateFlow<Long> = _appMemoryUsage
+
     init {
         loadNotes()
         loadLastViewedNote()
         loadTrashInfo()
         loadRetentionPeriod()
+        startMemoryMonitoring()
+    }
+
+    private fun startMemoryMonitoring() {
+        viewModelScope.launch(Dispatchers.IO) {
+            while(true) {
+                _totalNotesSize.value = trashManager.getTotalNotesSize()
+                _appMemoryUsage.value = trashManager.getAppMemoryUsage()
+                kotlinx.coroutines.delay(5000) // Обновляем каждые 5 секунд
+            }
+        }
     }
 
     private fun loadLastViewedNote() {
@@ -256,6 +273,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             userPreferences.setTrashRetentionPeriod(period)
             _currentRetentionPeriod.value = period
             loadTrashInfo() // Обновляем информацию о корзине
+        }
+    }
+
+    fun deleteNoteFromTrash(noteId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            trashManager.deleteNoteFromTrash(noteId)
+            loadTrashInfo()
+        }
+    }
+
+    fun clearTrash() {
+        viewModelScope.launch(Dispatchers.IO) {
+            trashManager.clearTrash()
+            loadTrashInfo()
         }
     }
 } 

@@ -28,9 +28,13 @@ fun TrashScreen(
     isOverLimit: Boolean,
     onRetentionPeriodChange: (TrashManager.RetentionPeriod) -> Unit,
     onRestoreNote: (Long) -> Unit,
+    onDeleteNote: (Long) -> Unit,
+    onClearTrash: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showClearConfirmation by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -38,6 +42,17 @@ fun TrashScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, "Назад")
+                    }
+                },
+                actions = {
+                    if (notes.isNotEmpty()) {
+                        IconButton(onClick = { showClearConfirmation = true }) {
+                            Icon(
+                                Icons.Default.DeleteSweep,
+                                contentDescription = "Очистить корзину",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             )
@@ -58,20 +73,62 @@ fun TrashScreen(
 
             Divider(modifier = Modifier.padding(vertical = 8.dp))
 
-            // Список удаленных заметок
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = 8.dp)
-            ) {
-                items(notes) { note ->
-                    TrashNoteItem(
-                        note = note,
-                        retentionPeriod = currentRetentionPeriod,
-                        onRestore = { onRestoreNote(note.id) }
+            if (notes.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "Корзина пуста",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            } else {
+                // Список удаленных заметок
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    items(notes) { note ->
+                        TrashNoteItem(
+                            note = note,
+                            retentionPeriod = currentRetentionPeriod,
+                            onRestore = { onRestoreNote(note.id) },
+                            onDelete = { onDeleteNote(note.id) }
+                        )
+                    }
                 }
             }
         }
+    }
+
+    if (showClearConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirmation = false },
+            title = { Text("Очистить корзину?") },
+            text = { Text("Все заметки в корзине будут удалены безвозвратно. Это действие нельзя отменить.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onClearTrash()
+                        showClearConfirmation = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Очистить")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirmation = false }) {
+                    Text("Отмена")
+                }
+            }
+        )
     }
 }
 
@@ -121,9 +178,12 @@ private fun TrashInfo(
 private fun TrashNoteItem(
     note: TrashNote,
     retentionPeriod: TrashManager.RetentionPeriod,
-    onRestore: () -> Unit
+    onRestore: () -> Unit,
+    onDelete: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var showFullContent by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier
@@ -170,6 +230,13 @@ private fun TrashNoteItem(
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
+                    IconButton(onClick = { showDeleteConfirmation = true }) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Удалить",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
 
@@ -178,22 +245,53 @@ private fun TrashNoteItem(
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
             ) {
-                Text(
-                    text = note.content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 8.dp),
-                    maxLines = 10,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Column {
+                    Text(
+                        text = if (showFullContent) note.content else note.content.take(500),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    if (note.content.length > 500 && !showFullContent) {
+                        TextButton(onClick = { showFullContent = true }) {
+                            Text("Показать полностью")
+                        }
+                    }
+                }
             }
         }
+    }
+
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text("Удалить заметку?") },
+            text = { Text("Заметка \"${note.title}\" будет удалена безвозвратно. Это действие нельзя отменить.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDelete()
+                        showDeleteConfirmation = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Удалить")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmation = false }) {
+                    Text("Отмена")
+                }
+            }
+        )
     }
 }
 
 private fun formatSize(bytes: Long): String {
     return when {
         bytes < 1024 -> "$bytes B"
-        bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+        bytes < 1024 * 1024 -> String.format("%.1f KB", bytes / 1024.0)
         else -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
     }
 }
