@@ -3,11 +3,14 @@ package com.flesiy.Lotus.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.flesiy.Lotus.data.UserPreferences
 import com.flesiy.Lotus.utils.FileUtils
 import com.flesiy.Lotus.utils.MarkdownUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
@@ -29,6 +32,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _currentNote = MutableStateFlow(Note(0L, "", "", "", 0L, 0L))
     val currentNote: StateFlow<Note> = _currentNote
+
+    private val userPreferences = UserPreferences(application)
+    val skipDeleteConfirmation = userPreferences.skipDeleteConfirmation.stateIn(
+        viewModelScope,
+         SharingStarted.WhileSubscribed(5000),
+        false
+    )
 
     init {
         loadNotes()
@@ -184,6 +194,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             
             loadNotes()
+        }
+    }
+
+    fun setSkipDeleteConfirmation(skip: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setSkipDeleteConfirmation(skip)
         }
     }
 } 

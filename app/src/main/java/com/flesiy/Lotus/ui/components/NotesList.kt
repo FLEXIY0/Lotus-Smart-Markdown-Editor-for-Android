@@ -22,8 +22,13 @@ fun NotesList(
     notes: List<Note>,
     onNoteClick: (Long) -> Unit,
     onNoteDelete: (Long) -> Unit,
+    skipDeleteConfirmation: Boolean,
+    onSkipDeleteConfirmationChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var noteToDelete by remember { mutableStateOf<Note?>(null) }
+
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(vertical = 8.dp)
@@ -32,9 +37,35 @@ fun NotesList(
             NoteItem(
                 note = note,
                 onClick = { onNoteClick(note.id) },
-                onDelete = { onNoteDelete(note.id) }
+                onDelete = {
+                    if (skipDeleteConfirmation) {
+                        onNoteDelete(note.id)
+                    } else {
+                        noteToDelete = note
+                        showDeleteDialog = true
+                    }
+                }
             )
         }
+    }
+
+    // Диалог подтверждения удаления
+    if (showDeleteDialog && noteToDelete != null) {
+        DeleteNoteDialog(
+            noteTitle = noteToDelete!!.title,
+            onConfirm = { dontAskAgain ->
+                if (dontAskAgain) {
+                    onSkipDeleteConfirmationChange(true)
+                }
+                onNoteDelete(noteToDelete!!.id)
+                showDeleteDialog = false
+                noteToDelete = null
+            },
+            onDismiss = {
+                showDeleteDialog = false
+                noteToDelete = null
+            }
+        )
     }
 }
 
