@@ -172,6 +172,7 @@ private fun NoteItem(
     val maxSwipe = 200f
     val flyAwayDistance = 2000f
     var isAnimatingSwipe by remember { mutableStateOf(false) }
+    var isReturning by remember { mutableStateOf(false) }
     var targetAction: SwipeAction? by remember { mutableStateOf(null) }
     var velocityX by remember { mutableStateOf(0f) }
 
@@ -183,7 +184,6 @@ private fun NoteItem(
         },
         animationSpec = when (targetAction) {
             SwipeAction.PIN -> tween(
-                // Регулируем скорость анимации в зависимости от скорости свайпа
                 durationMillis = if (abs(velocityX) > 3000) 200 else 400,
                 easing = FastOutSlowInEasing
             )
@@ -200,31 +200,38 @@ private fun NoteItem(
             if (isAnimatingSwipe) {
                 when (targetAction) {
                     SwipeAction.PIN -> {
-                        onNotePinned(note.id)
-                        // Сбрасываем состояние только после завершения анимации
+                        // Сначала завершаем анимацию
                         MainScope().launch {
-                            delay(50)
+                            delay(200) // Даем время на завершение анимации
+                            onNotePinned(note.id)
+                            delay(50) // Небольшая пауза перед сбросом состояния
                             offsetX = 0f
                             isAnimatingSwipe = false
                             targetAction = null
                             velocityX = 0f
+                            isReturning = false
                         }
                     }
                     SwipeAction.DELETE -> {
-                        if (skipDeleteConfirmation) {
-                            onNoteDelete(note.id)
-                        } else {
-                            showDeleteDialog = true
-                        }
+                        // Сначала завершаем анимацию
                         MainScope().launch {
-                            delay(50)
+                            delay(200) // Даем время на завершение анимации
+                            if (skipDeleteConfirmation) {
+                                onNoteDelete(note.id)
+                            } else {
+                                showDeleteDialog = true
+                            }
+                            delay(50) // Небольшая пауза перед сбросом состояния
                             offsetX = 0f
                             isAnimatingSwipe = false
                             targetAction = null
                             velocityX = 0f
+                            isReturning = false
                         }
                     }
-                    null -> {}
+                    null -> {
+                        isReturning = false
+                    }
                 }
             }
         }
@@ -235,7 +242,7 @@ private fun NoteItem(
             .draggable(
                 orientation = Orientation.Horizontal,
                 state = rememberDraggableState { delta ->
-                    if (!isAnimatingSwipe) {
+                    if (!isAnimatingSwipe && !isReturning) {
                         // Сглаживаем движение при быстром свайпе
                         val smoothDelta = delta * 0.8f
                         offsetX = (offsetX + smoothDelta).coerceIn(-maxSwipe, maxSwipe)
@@ -255,6 +262,7 @@ private fun NoteItem(
                             targetAction = SwipeAction.DELETE
                         }
                         else -> {
+                            isReturning = true
                             offsetX = 0f
                             velocityX = 0f
                         }
@@ -268,13 +276,7 @@ private fun NoteItem(
                 .matchParentSize()
                 .background(
                     when {
-                        // Показываем фон только при активном свайпе или анимации вылета
-                        isAnimatingSwipe && targetAction != null -> when (targetAction) {
-                            SwipeAction.DELETE -> MaterialTheme.colorScheme.error
-                            SwipeAction.PIN -> MaterialTheme.colorScheme.primary
-                            null -> Color.Transparent
-                        }
-                        // При обычном свайпе
+                        // Показываем фон только при активном свайпе
                         !isAnimatingSwipe && abs(offsetX) > 0f -> when {
                             offsetX > 0 -> MaterialTheme.colorScheme.error.copy(
                                 alpha = (abs(offsetX) / swipeThreshold).coerceIn(0f, 1f) * 0.7f
@@ -288,31 +290,20 @@ private fun NoteItem(
                     }
                 ),
             contentAlignment = when {
-                isAnimatingSwipe && targetAction != null -> when (targetAction) {
-                    SwipeAction.DELETE -> Alignment.CenterStart
-                    SwipeAction.PIN -> Alignment.CenterEnd
-                    null -> Alignment.Center
-                }
                 offsetX > 0 -> Alignment.CenterStart
                 else -> Alignment.CenterEnd
             }
         ) {
             // Иконка с плавным появлением
-            if ((abs(offsetX) > 20f && !isAnimatingSwipe) || (isAnimatingSwipe && targetAction != null)) {
+            if (abs(offsetX) > 20f && !isAnimatingSwipe) {
                 Icon(
                     imageVector = when {
-                        isAnimatingSwipe && targetAction != null -> when (targetAction) {
-                            SwipeAction.DELETE -> Icons.Default.Delete
-                            SwipeAction.PIN -> Icons.Default.PushPin
-                            null -> Icons.Default.Delete
-                        }
                         offsetX > 0 -> Icons.Default.Delete
                         else -> Icons.Default.PushPin
                     },
                     contentDescription = null,
                     tint = Color.White.copy(
-                        alpha = if (abs(offsetX) > swipeThreshold || (isAnimatingSwipe && targetAction != null)) 1f 
-                               else (abs(offsetX) / swipeThreshold).coerceIn(0f, 1f)
+                        alpha = (abs(offsetX) / swipeThreshold).coerceIn(0f, 1f)
                     ),
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
