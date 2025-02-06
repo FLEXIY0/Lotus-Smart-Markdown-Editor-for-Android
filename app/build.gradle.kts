@@ -122,6 +122,9 @@ dependencies {
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // Reorderable
+    implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
 }
 
 configurations.all {

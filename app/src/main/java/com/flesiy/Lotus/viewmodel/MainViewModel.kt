@@ -25,7 +25,9 @@ data class Note(
     val content: String,
     val modifiedAt: Long = System.currentTimeMillis(),
     val createdAt: Long = System.currentTimeMillis(),
-    val isPreviewMode: Boolean = false
+    val isPreviewMode: Boolean = false,
+    val isPinned: Boolean = false,
+    val order: Int = 0
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -108,6 +110,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         if (content.isNotEmpty()) {
                             val noteId = MarkdownUtils.extractNoteId(file)
                             val isPreviewMode = FileUtils.readNotePreviewMode(getApplication(), noteId)
+                            val isPinned = FileUtils.readNotePinned(getApplication(), noteId)
+                            val order = FileUtils.readNoteOrder(getApplication(), noteId)
                             Note(
                                 id = noteId,
                                 title = MarkdownUtils.extractTitle(content),
@@ -115,7 +119,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 content = content,
                                 modifiedAt = file.lastModified(),
                                 createdAt = noteId,
-                                isPreviewMode = isPreviewMode
+                                isPreviewMode = isPreviewMode,
+                                isPinned = isPinned,
+                                order = order
                             )
                         } else {
                             null
@@ -124,7 +130,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         null
                     }
                 }
-                _notes.value = notesList
+                _notes.value = notesList.sortedWith(compareBy({ !it.isPinned }, { -it.order }, { -it.modifiedAt }))
             } catch (e: Exception) {
                 // Если произошла ошибка при загрузке списка, сохраняем текущий список
             }
@@ -178,7 +184,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val file = FileUtils.createNoteFile(getApplication())
             val noteId = MarkdownUtils.extractNoteId(file)
             val now = System.currentTimeMillis()
-            _currentNote.value = Note(noteId, "Без названия", "", "", now, now, false)
+            _currentNote.value = Note(noteId, "Без названия", "", "", now, now, false, false, 0)
             // Сохраняем новую заметку как последнюю просмотренную
             FileUtils.saveLastViewedNoteId(getApplication(), noteId)
         }
@@ -199,6 +205,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 } else {
                     val file = File(FileUtils.getNotesDirectory(getApplication()), "$noteId.md")
                     val isPreviewMode = FileUtils.readNotePreviewMode(getApplication(), noteId)
+                    val isPinned = FileUtils.readNotePinned(getApplication(), noteId)
+                    val order = FileUtils.readNoteOrder(getApplication(), noteId)
                     _currentNote.value = Note(
                         id = noteId,
                         title = MarkdownUtils.extractTitle(content),
@@ -206,7 +214,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         content = content,
                         modifiedAt = file.lastModified(),
                         createdAt = noteId,
-                        isPreviewMode = isPreviewMode
+                        isPreviewMode = isPreviewMode,
+                        isPinned = isPinned,
+                        order = order
                     )
                 }
                 // Сохраняем ID просматриваемой заметки
@@ -287,6 +297,48 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             trashManager.clearTrash()
             loadTrashInfo()
+        }
+    }
+
+    fun toggleNotePinned(noteId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val notes = _notes.value.toMutableList()
+            val noteIndex = notes.indexOfFirst { it.id == noteId }
+            if (noteIndex != -1) {
+                val note = notes[noteIndex]
+                val pinnedNotes = notes.filter { it.isPinned }
+                val newNote = note.copy(
+                    isPinned = !note.isPinned,
+                    order = if (!note.isPinned) pinnedNotes.size else 0
+                )
+                notes[noteIndex] = newNote
+                FileUtils.saveNotePinned(getApplication(), noteId, newNote.isPinned)
+                FileUtils.saveNoteOrder(getApplication(), noteId, newNote.order)
+                _notes.value = notes.sortedWith(compareBy({ !it.isPinned }, { -it.order }, { -it.modifiedAt }))
+            }
+        }
+    }
+
+    fun moveNote(fromIndex: Int, toIndex: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val notes = _notes.value.toMutableList()
+            val note = notes.removeAt(fromIndex)
+            notes.add(toIndex, note)
+            
+            // Обновляем порядок для закрепленных заметок
+            if (note.isPinned) {
+                val pinnedNotes = notes.filter { it.isPinned }
+                pinnedNotes.forEachIndexed { index, pinnedNote ->
+                    val updatedNote = pinnedNote.copy(order = pinnedNotes.size - index)
+                    val noteIndex = notes.indexOfFirst { it.id == pinnedNote.id }
+                    if (noteIndex != -1) {
+                        notes[noteIndex] = updatedNote
+                        FileUtils.saveNoteOrder(getApplication(), updatedNote.id, updatedNote.order)
+                    }
+                }
+            }
+            
+            _notes.value = notes
         }
     }
 } 

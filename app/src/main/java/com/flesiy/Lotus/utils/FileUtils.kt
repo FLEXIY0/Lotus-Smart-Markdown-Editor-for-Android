@@ -6,6 +6,8 @@ import java.io.File
 object FileUtils {
     private const val NOTES_DIRECTORY = "notes"
     private const val PREVIEW_MODE_DIRECTORY = "preview_mode"
+    private const val PINNED_NOTES_DIRECTORY = "pinned_notes"
+    private const val NOTE_ORDER_DIRECTORY = "note_order"
     private const val LAST_VIEWED_NOTE_FILE = "last_viewed_note"
 
     fun getNotesDirectory(context: Context): File {
@@ -18,6 +20,22 @@ object FileUtils {
 
     private fun getPreviewModeDirectory(context: Context): File {
         val directory = File(context.filesDir, PREVIEW_MODE_DIRECTORY)
+        if (!directory.exists()) {
+            directory.mkdirs()
+        }
+        return directory
+    }
+
+    private fun getPinnedNotesDirectory(context: Context): File {
+        val directory = File(context.filesDir, PINNED_NOTES_DIRECTORY)
+        if (!directory.exists()) {
+            directory.mkdirs()
+        }
+        return directory
+    }
+
+    private fun getNoteOrderDirectory(context: Context): File {
+        val directory = File(context.filesDir, NOTE_ORDER_DIRECTORY)
         if (!directory.exists()) {
             directory.mkdirs()
         }
@@ -94,6 +112,42 @@ object FileUtils {
             }
         } else {
             null
+        }
+    }
+
+    fun saveNotePinned(context: Context, noteId: Long, isPinned: Boolean) {
+        val directory = getPinnedNotesDirectory(context)
+        val file = File(directory, "$noteId.pinned")
+        if (isPinned) {
+            file.writeText(isPinned.toString())
+        } else {
+            file.delete()
+        }
+    }
+
+    fun readNotePinned(context: Context, noteId: Long): Boolean {
+        val directory = getPinnedNotesDirectory(context)
+        val file = File(directory, "$noteId.pinned")
+        return file.exists() && file.readText().toBoolean()
+    }
+
+    fun saveNoteOrder(context: Context, noteId: Long, order: Int) {
+        val directory = getNoteOrderDirectory(context)
+        val file = File(directory, "$noteId.order")
+        file.writeText(order.toString())
+    }
+
+    fun readNoteOrder(context: Context, noteId: Long): Int {
+        val directory = getNoteOrderDirectory(context)
+        val file = File(directory, "$noteId.order")
+        return if (file.exists()) {
+            try {
+                file.readText().toInt()
+            } catch (e: Exception) {
+                0
+            }
+        } else {
+            0
         }
     }
 } 

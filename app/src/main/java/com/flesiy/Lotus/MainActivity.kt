@@ -84,6 +84,12 @@ fun LotusApp() {
                             onNoteDelete = { noteId ->
                                 viewModel.deleteNote(noteId)
                             },
+                            onNotePinned = { noteId ->
+                                viewModel.toggleNotePinned(noteId)
+                            },
+                            onNoteMove = { fromIndex, toIndex ->
+                                viewModel.moveNote(fromIndex, toIndex)
+                            },
                             skipDeleteConfirmation = viewModel.skipDeleteConfirmation.collectAsState().value,
                             onSkipDeleteConfirmationChange = { skip ->
                                 viewModel.setSkipDeleteConfirmation(skip)
