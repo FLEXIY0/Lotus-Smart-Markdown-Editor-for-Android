@@ -21,6 +21,7 @@ import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
 import io.noties.markwon.ext.tables.TablePlugin
 import io.noties.markwon.html.HtmlPlugin
 import io.noties.markwon.image.coil.CoilImagesPlugin
+import io.noties.markwon.linkify.LinkifyPlugin
 
 @Composable
 fun MarkdownPreviewScreen(
@@ -77,6 +78,7 @@ private fun createPreviewTextView(context: Context): TextView {
         textSize = 16f
         setPadding(16, 16, 16, 16)
         setTextIsSelectable(true)
+        movementMethod = android.text.method.LinkMovementMethod.getInstance()
         gravity = android.view.Gravity.TOP
     }
 }
@@ -88,5 +90,6 @@ private fun createMarkwon(context: Context): Markwon {
         .usePlugin(TablePlugin.create(context))
         .usePlugin(HtmlPlugin.create())
         .usePlugin(CoilImagesPlugin.create(context))
+        .usePlugin(LinkifyPlugin.create())
         .build()
 } 
