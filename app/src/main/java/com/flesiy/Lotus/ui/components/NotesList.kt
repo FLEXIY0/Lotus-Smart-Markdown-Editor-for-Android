@@ -1,18 +1,39 @@
 package com.flesiy.Lotus.ui.components
 
-import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -20,30 +41,42 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import com.flesiy.Lotus.viewmodel.Note
-import org.burnoutcrew.reorderable.*
-import java.text.SimpleDateFormat
-import java.util.*
-import kotlin.math.abs
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.burnoutcrew.reorderable.ReorderableItem
+import org.burnoutcrew.reorderable.detectReorderAfterLongPress
+import org.burnoutcrew.reorderable.rememberReorderableLazyListState
+import org.burnoutcrew.reorderable.reorderable
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.math.abs
 
 private enum class SwipeAction {
     PIN, DELETE
 }
 
-private fun Modifier.draggedItem(isDragging: Boolean): Modifier = this.then(
-    Modifier.graphicsLayer {
-        if (isDragging) {
-            scaleX = 1.05f
-            scaleY = 1.05f
-            shadowElevation = 8f
+private fun Modifier.draggedItem(isDragging: Boolean): Modifier = composed {
+    this
+        .graphicsLayer {
+            if (isDragging) {
+                scaleX = 1.05f
+                scaleY = 1.05f
+                shadowElevation = 16f
+                alpha = 0.9f
+            }
         }
-    }
-)
+        .background(
+            color = if (isDragging) 
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+            else 
+                Color.Transparent
+        )
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -70,18 +103,26 @@ fun NotesList(
         }
     })
 
-    val unpinnedState = rememberReorderableLazyListState(onMove = { from, to ->
-        // Перемещение только внутри обычных заметок
-        val startIndex = pinnedNotes.size
-        val realFromIndex = from.index + startIndex
-        val realToIndex = to.index + startIndex
-        if (realFromIndex >= startIndex && realToIndex >= startIndex) {
-            onNoteMove(realFromIndex, realToIndex)
+    val unpinnedState = rememberReorderableLazyListState(
+        onMove = { from, to ->
+            // Перемещение только внутри обычных заметок
+            val startIndex = pinnedNotes.size
+            val realFromIndex = from.index + startIndex
+            val realToIndex = to.index + startIndex
+            if (realFromIndex >= startIndex && realToIndex >= startIndex) {
+                onNoteMove(realFromIndex, realToIndex)
+            }
+        },
+        canDragOver = { draggedOver, dragging ->
+            // Проверяем только индексы внутри секции незакрепленных заметок
+            draggedOver.index in unpinnedNotes.indices && 
+            dragging.index in unpinnedNotes.indices
         }
-    })
+    )
 
     LazyColumn(
-        modifier = modifier
+        modifier = modifier,
+        state = unpinnedState.listState // Используем состояние из reorderable
     ) {
         // Секция закрепленных заметок
         if (pinnedNotes.isNotEmpty()) {
@@ -136,20 +177,26 @@ fun NotesList(
             items = unpinnedNotes,
             key = { it.id }
         ) { note ->
-            Box(
-                modifier = Modifier
-                    .reorderable(unpinnedState)
-                    .detectReorderAfterLongPress(unpinnedState)
-            ) {
-                NoteItem(
-                    note = note,
-                    onNoteClick = onNoteClick,
-                    onNoteDelete = onNoteDelete,
-                    onNotePinned = onNotePinned,
-                    skipDeleteConfirmation = skipDeleteConfirmation,
-                    onSkipDeleteConfirmationChange = onSkipDeleteConfirmationChange,
-                    modifier = Modifier.animateItemPlacement()
-                )
+            ReorderableItem(
+                reorderableState = unpinnedState,
+                key = note.id,
+                modifier = Modifier.animateItemPlacement()
+            ) { isDragging ->
+                Box(
+                    modifier = Modifier
+                        .draggedItem(isDragging)
+                ) {
+                    NoteItem(
+                        note = note,
+                        onNoteClick = onNoteClick,
+                        onNoteDelete = onNoteDelete,
+                        onNotePinned = onNotePinned,
+                        skipDeleteConfirmation = skipDeleteConfirmation,
+                        onSkipDeleteConfirmationChange = onSkipDeleteConfirmationChange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    )
+                }
             }
         }
     }

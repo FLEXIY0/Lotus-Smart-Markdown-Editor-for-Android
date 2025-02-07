@@ -1,8 +1,11 @@
 package com.flesiy.Lotus
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.content.FileProvider
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -17,6 +20,7 @@ import androidx.navigation.compose.rememberNavController
 import com.flesiy.Lotus.ui.components.NoteEditor
 import com.flesiy.Lotus.ui.components.NotesList
 import com.flesiy.Lotus.ui.components.TrashScreen
+import com.flesiy.Lotus.ui.components.FileManagementScreen
 import com.flesiy.Lotus.ui.theme.LotusTheme
 import com.flesiy.Lotus.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
@@ -26,6 +30,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import kotlin.math.roundToInt
+import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,6 +61,16 @@ fun LotusApp() {
     val trashSize by viewModel.trashSize.collectAsState()
     val isTrashOverLimit by viewModel.isTrashOverLimit.collectAsState()
     val currentRetentionPeriod by viewModel.currentRetentionPeriod.collectAsState()
+    
+    // Добавляем ключ для перезапуска списка
+    var notesListKey by remember { mutableStateOf(0) }
+    
+    // Отслеживаем состояние drawer'а
+    LaunchedEffect(drawerState.currentValue) {
+        if (drawerState.currentValue == DrawerValue.Closed) {
+            notesListKey++ // Увеличиваем ключ при закрытии меню
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -76,29 +91,33 @@ fun LotusApp() {
                             .weight(1f)
                             .fillMaxWidth()
                     ) {
-                        NotesList(
-                            notes = notes,
-                            onNoteClick = { noteId ->
-                                viewModel.loadNote(noteId)
-                                scope.launch {
-                                    drawerState.close()
+                        // Добавляем ключ к NotesList
+                        key(notesListKey) {
+                            NotesList(
+                                notes = notes,
+                                onNoteClick = { noteId ->
+                                    viewModel.loadNote(noteId)
+                                    viewModel.updateLastViewedNoteFile()
+                                    scope.launch {
+                                        drawerState.close()
+                                    }
+                                    navController.navigate("editor")
+                                },
+                                onNoteDelete = { noteId ->
+                                    viewModel.deleteNote(noteId)
+                                },
+                                onNotePinned = { noteId ->
+                                    viewModel.toggleNotePinned(noteId)
+                                },
+                                onNoteMove = { fromIndex, toIndex ->
+                                    viewModel.moveNote(fromIndex, toIndex)
+                                },
+                                skipDeleteConfirmation = viewModel.skipDeleteConfirmation.collectAsState().value,
+                                onSkipDeleteConfirmationChange = { skip ->
+                                    viewModel.setSkipDeleteConfirmation(skip)
                                 }
-                                navController.navigate("editor")
-                            },
-                            onNoteDelete = { noteId ->
-                                viewModel.deleteNote(noteId)
-                            },
-                            onNotePinned = { noteId ->
-                                viewModel.toggleNotePinned(noteId)
-                            },
-                            onNoteMove = { fromIndex, toIndex ->
-                                viewModel.moveNote(fromIndex, toIndex)
-                            },
-                            skipDeleteConfirmation = viewModel.skipDeleteConfirmation.collectAsState().value,
-                            onSkipDeleteConfirmationChange = { skip ->
-                                viewModel.setSkipDeleteConfirmation(skip)
-                            }
-                        )
+                            )
+                        }
                     }
                     
                     // Фиксированная нижняя часть
@@ -107,6 +126,97 @@ fun LotusApp() {
                             .fillMaxWidth()
                             .padding(vertical = 8.dp)
                     ) {
+                        Divider()
+                        
+                        // Пункт импорта/экспорта
+                        ListItem(
+                            headlineContent = { Text("Загрузка и отправка") },
+                            supportingContent = {
+                                Column {
+                                    Text(
+                                        text = "Экспорт, импорт и отправка заметок",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Row(
+                                        modifier = Modifier.padding(top = 4.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        val context = LocalContext.current
+                                        val exportDirectory by viewModel.exportDirectory.collectAsState(initial = null)
+                                        val lastViewedFile by viewModel.lastViewedNoteFile.collectAsState(initial = null)
+
+                                        AssistChip(
+                                            onClick = { 
+                                                exportDirectory?.let { dir ->
+                                                    val intent = Intent(Intent.ACTION_VIEW)
+                                                    intent.setDataAndType(
+                                                        FileProvider.getUriForFile(
+                                                            context,
+                                                            "${context.packageName}.provider",
+                                                            dir
+                                                        ),
+                                                        "*/*"
+                                                    )
+                                                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                    context.startActivity(intent)
+                                                }
+                                            },
+                                            label = { Text("Хранилище") },
+                                            leadingIcon = {
+                                                Icon(
+                                                    Icons.Default.FolderOpen,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            },
+                                            enabled = exportDirectory != null
+                                        )
+                                        AssistChip(
+                                            onClick = { 
+                                                lastViewedFile?.let { file ->
+                                                    val intent = Intent(Intent.ACTION_SEND)
+                                                    intent.type = "text/plain"
+                                                    intent.putExtra(
+                                                        Intent.EXTRA_STREAM,
+                                                        FileProvider.getUriForFile(
+                                                            context,
+                                                            "${context.packageName}.provider",
+                                                            file
+                                                        )
+                                                    )
+                                                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                    context.startActivity(Intent.createChooser(intent, "Отправить заметку"))
+                                                }
+                                            },
+                                            label = { Text("Отправка") },
+                                            leadingIcon = {
+                                                Icon(
+                                                    Icons.Default.Share,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            },
+                                            enabled = lastViewedFile != null
+                                        )
+                                    }
+                                }
+                            },
+                            leadingContent = {
+                                Icon(
+                                    Icons.Default.SwapHoriz,
+                                    contentDescription = "Загрузка и отправка",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            modifier = Modifier.clickable {
+                                scope.launch {
+                                    drawerState.close()
+                                }
+                                navController.navigate("file_management")
+                            }
+                        )
+                        
                         Divider()
                         
                         // Кнопка корзины
@@ -259,6 +369,18 @@ fun LotusApp() {
                     onBack = {
                         navController.popBackStack()
                     }
+                )
+            }
+
+            composable(
+                route = "file_management"
+            ) {
+                FileManagementScreen(
+                    viewModel = viewModel,
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    modifier = Modifier
                 )
             }
         }

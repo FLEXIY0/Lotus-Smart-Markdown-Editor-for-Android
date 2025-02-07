@@ -64,12 +64,49 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _appMemoryUsage = MutableStateFlow(0L)
     val appMemoryUsage: StateFlow<Long> = _appMemoryUsage
 
+    private val _exportDirectory: MutableStateFlow<File?> = MutableStateFlow(null)
+    val exportDirectory: StateFlow<File?> = _exportDirectory
+
+    private val _lastViewedNoteFile: MutableStateFlow<File?> = MutableStateFlow(null)
+    val lastViewedNoteFile: StateFlow<File?> = _lastViewedNoteFile
+
     init {
         loadNotes()
         loadLastViewedNote()
         loadTrashInfo()
         loadRetentionPeriod()
         startMemoryMonitoring()
+        initExportDirectory()
+    }
+
+    private fun initExportDirectory() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val context = getApplication<Application>()
+            val defaultDir = File(context.getExternalFilesDir(null), "Lotus")
+            if (!defaultDir.exists()) {
+                defaultDir.mkdirs()
+            }
+            _exportDirectory.value = defaultDir
+        }
+    }
+
+    fun setExportDirectory(directory: File) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (!directory.exists()) {
+                directory.mkdirs()
+            }
+            _exportDirectory.value = directory
+        }
+    }
+
+    fun updateLastViewedNoteFile() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val noteId = currentNote.value.id
+            val file = File(FileUtils.getNotesDirectory(getApplication()), "$noteId.md")
+            if (file.exists()) {
+                _lastViewedNoteFile.value = file
+            }
+        }
     }
 
     private fun startMemoryMonitoring() {
@@ -325,8 +362,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val note = notes.removeAt(fromIndex)
             notes.add(toIndex, note)
             
-            // Обновляем порядок для закрепленных заметок
+            // Обновляем порядок для всех заметок в соответствующей секции
             if (note.isPinned) {
+                // Обновляем порядок закрепленных заметок
                 val pinnedNotes = notes.filter { it.isPinned }
                 pinnedNotes.forEachIndexed { index, pinnedNote ->
                     val updatedNote = pinnedNote.copy(order = pinnedNotes.size - index)
@@ -336,9 +374,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         FileUtils.saveNoteOrder(getApplication(), updatedNote.id, updatedNote.order)
                     }
                 }
+            } else {
+                // Обновляем порядок незакрепленных заметок
+                val unpinnedNotes = notes.filter { !it.isPinned }
+                unpinnedNotes.forEachIndexed { index, unpinnedNote ->
+                    val updatedNote = unpinnedNote.copy(order = unpinnedNotes.size - index)
+                    val noteIndex = notes.indexOfFirst { it.id == unpinnedNote.id }
+                    if (noteIndex != -1) {
+                        notes[noteIndex] = updatedNote
+                        FileUtils.saveNoteOrder(getApplication(), updatedNote.id, updatedNote.order)
+                    }
+                }
             }
             
             _notes.value = notes
         }
+    }
+
+    fun onExportDirectorySelect(directory: File) {
+        setExportDirectory(directory)
     }
 } 
