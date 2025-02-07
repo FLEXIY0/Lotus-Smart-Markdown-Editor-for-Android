@@ -83,7 +83,7 @@ fun LotusApp() {
                 Column(
                     modifier = Modifier.fillMaxHeight()
                 ) {
-                    Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                     
                     // Список заметок в скроллируемом контейнере
                     Box(
@@ -93,18 +93,18 @@ fun LotusApp() {
                     ) {
                         // Добавляем ключ к NotesList
                         key(notesListKey) {
-                            NotesList(
-                                notes = notes,
-                                onNoteClick = { noteId ->
-                                    viewModel.loadNote(noteId)
+                NotesList(
+                    notes = notes,
+                    onNoteClick = { noteId ->
+                        viewModel.loadNote(noteId)
                                     viewModel.updateLastViewedNoteFile()
-                                    scope.launch {
-                                        drawerState.close()
-                                    }
-                                    navController.navigate("editor")
-                                },
-                                onNoteDelete = { noteId ->
-                                    viewModel.deleteNote(noteId)
+                        scope.launch {
+                            drawerState.close()
+                        }
+                        navController.navigate("editor")
+                    },
+                    onNoteDelete = { noteId ->
+                        viewModel.deleteNote(noteId)
                                 },
                                 onNotePinned = { noteId ->
                                     viewModel.toggleNotePinned(noteId)
@@ -302,29 +302,29 @@ fun LotusApp() {
         ) {
             composable(
                 route = "editor"
-            ) {
-                Scaffold(
-                    topBar = {
-                        TopAppBar(
-                            title = { Text("Lotus") },
-                            navigationIcon = {
-                                IconButton(onClick = {
-                                    scope.launch {
-                                        drawerState.open()
-                                    }
-                                }) {
-                                    Icon(Icons.Default.Menu, contentDescription = "Меню")
-                                }
-                            },
-                            actions = {
-                                IconButton(onClick = {
-                                    viewModel.createNewNote()
-                                }) {
-                                    Icon(Icons.Default.Add, contentDescription = "Новая заметка")
-                                }
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Lotus") },
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            scope.launch {
+                                drawerState.open()
                             }
-                        )
+                        }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Меню")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            viewModel.createNewNote()
+                        }) {
+                            Icon(Icons.Default.Add, contentDescription = "Новая заметка")
+                        }
                     }
+                )
+            }
                 ) { padding ->
                     NoteEditor(
                         note = currentNote,
@@ -341,6 +341,9 @@ fun LotusApp() {
                         onPreviewModeChange = { isPreview ->
                             viewModel.updatePreviewMode(isPreview)
                         },
+                        onMediaManage = {
+                            navController.navigate("file_management")
+                        },
                         modifier = Modifier.padding(padding)
                     )
                 }
@@ -354,6 +357,7 @@ fun LotusApp() {
                     currentRetentionPeriod = currentRetentionPeriod,
                     trashSize = trashSize,
                     isOverLimit = isTrashOverLimit,
+                    cacheStats = viewModel.cacheStats.collectAsState().value,
                     onRetentionPeriodChange = { period ->
                         viewModel.setRetentionPeriod(period)
                     },
@@ -365,6 +369,15 @@ fun LotusApp() {
                     },
                     onClearTrash = {
                         viewModel.clearTrash()
+                    },
+                    onClearCache = {
+                        viewModel.clearCache()
+                    },
+                    onClearImagesCache = {
+                        viewModel.clearImagesCache()
+                    },
+                    onClearFilesCache = {
+                        viewModel.clearFilesCache()
                     },
                     onBack = {
                         navController.popBackStack()

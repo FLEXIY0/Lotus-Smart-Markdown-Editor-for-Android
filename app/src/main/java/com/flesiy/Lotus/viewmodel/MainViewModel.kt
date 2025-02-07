@@ -64,6 +64,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _appMemoryUsage = MutableStateFlow(0L)
     val appMemoryUsage: StateFlow<Long> = _appMemoryUsage
 
+    private val _cacheStats = MutableStateFlow(TrashManager.CacheStats(0L, 0L, 0L, emptyMap()))
+    val cacheStats: StateFlow<TrashManager.CacheStats> = _cacheStats
+
     private val _exportDirectory: MutableStateFlow<File?> = MutableStateFlow(null)
     val exportDirectory: StateFlow<File?> = _exportDirectory
 
@@ -77,6 +80,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadRetentionPeriod()
         startMemoryMonitoring()
         initExportDirectory()
+        updateCacheStats()
     }
 
     private fun initExportDirectory() {
@@ -277,6 +281,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val note = _notes.value.find { it.id == noteId }
             if (note != null) {
                 trashManager.moveToTrash(noteId, note.content)
+                trashManager.deleteImagesForNote(noteId) // Удаляем изображения
                 FileUtils.deleteNote(getApplication(), noteId)
                 FileUtils.deleteNotePreviewMode(getApplication(), noteId)
                 
@@ -294,6 +299,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 
                 loadNotes()
                 loadTrashInfo()
+                updateCacheStats()
             }
         }
     }
@@ -305,6 +311,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 FileUtils.saveNote(getApplication(), noteId, content)
                 loadNotes()
                 loadTrashInfo()
+                updateCacheStats()
             }
         }
     }
@@ -393,5 +400,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onExportDirectorySelect(directory: File) {
         setExportDirectory(directory)
+    }
+
+    private fun updateCacheStats() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _cacheStats.value = trashManager.getCacheStats()
+        }
+    }
+
+    fun clearCache() {
+        viewModelScope.launch(Dispatchers.IO) {
+            trashManager.clearCache()
+            updateCacheStats()
+        }
+    }
+
+    fun clearImagesCache() {
+        viewModelScope.launch(Dispatchers.IO) {
+            trashManager.clearImagesCache()
+            updateCacheStats()
+        }
+    }
+
+    fun clearFilesCache() {
+        viewModelScope.launch(Dispatchers.IO) {
+            trashManager.clearFilesCache()
+            updateCacheStats()
+        }
     }
 } 

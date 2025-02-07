@@ -4,12 +4,12 @@ import android.content.Context
 import android.widget.TextView
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -29,24 +29,26 @@ fun MarkdownPreviewScreen(
     isPreviewMode: Boolean,
     modifier: Modifier = Modifier
 ) {
-    Crossfade(
-        targetState = isPreviewMode,
-        animationSpec = tween(durationMillis = 300),
-        modifier = modifier
-    ) { inPreviewMode ->
-        if (inPreviewMode) {
-            MarkdownPreview(
-                content = content,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            )
-        } else {
-            CustomMarkdownEditor(
-                value = content,
-                onValueChange = { /* будет добавлено позже */ },
-                modifier = Modifier.fillMaxSize()
-            )
+    Box(modifier = modifier) {
+        Crossfade(
+            targetState = isPreviewMode,
+            animationSpec = tween(durationMillis = 300),
+            modifier = Modifier.fillMaxSize()
+        ) { inPreviewMode ->
+            if (inPreviewMode) {
+                MarkdownPreview(
+                    content = content,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                )
+            } else {
+                CustomMarkdownEditor(
+                    value = content,
+                    onValueChange = { /* будет добавлено позже */ },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 }

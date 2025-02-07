@@ -26,14 +26,21 @@ fun TrashScreen(
     currentRetentionPeriod: TrashManager.RetentionPeriod,
     trashSize: Long,
     isOverLimit: Boolean,
+    cacheStats: TrashManager.CacheStats,
     onRetentionPeriodChange: (TrashManager.RetentionPeriod) -> Unit,
     onRestoreNote: (Long) -> Unit,
     onDeleteNote: (Long) -> Unit,
     onClearTrash: () -> Unit,
+    onClearCache: () -> Unit,
+    onClearImagesCache: () -> Unit,
+    onClearFilesCache: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showClearConfirmation by remember { mutableStateOf(false) }
+    var showClearCacheConfirmation by remember { mutableStateOf(false) }
+    var showClearImagesCacheConfirmation by remember { mutableStateOf(false) }
+    var showClearFilesCacheConfirmation by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -58,48 +65,144 @@ fun TrashScreen(
             )
         }
     ) { padding ->
-        Column(
+        LazyColumn(
             modifier = modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
             // Информация о корзине
-            TrashInfo(
-                trashSize = trashSize,
-                isOverLimit = isOverLimit,
-                currentRetentionPeriod = currentRetentionPeriod,
-                onRetentionPeriodChange = onRetentionPeriodChange
-            )
+            item {
+                TrashInfo(
+                    trashSize = trashSize,
+                    isOverLimit = isOverLimit,
+                    currentRetentionPeriod = currentRetentionPeriod,
+                    onRetentionPeriodChange = onRetentionPeriodChange
+                )
 
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
+            }
+
+            // Секция кеша
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Кеш",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Общий размер кеша
+                        ListItem(
+                            headlineContent = { Text("Общий размер кеша") },
+                            supportingContent = { Text(formatSize(cacheStats.totalSize)) },
+                            leadingContent = {
+                                Icon(
+                                    Icons.Default.Storage,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            trailingContent = {
+                                TextButton(
+                                    onClick = { showClearCacheConfirmation = true },
+                                    enabled = cacheStats.totalSize > 0
+                                ) {
+                                    Text("Очистить")
+                                }
+                            }
+                        )
+
+                        // Кеш изображений
+                        ListItem(
+                            headlineContent = { Text("Кеш изображений") },
+                            supportingContent = { 
+                                Column {
+                                    Text(formatSize(cacheStats.imagesSize))
+                                    if (cacheStats.noteImagesCount.isNotEmpty()) {
+                                        Text(
+                                            "Временные файлы изображений в ${cacheStats.noteImagesCount.size} заметках",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                            },
+                            leadingContent = {
+                                Icon(
+                                    Icons.Default.Image,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            trailingContent = {
+                                TextButton(
+                                    onClick = { showClearImagesCacheConfirmation = true },
+                                    enabled = cacheStats.imagesSize > 0
+                                ) {
+                                    Text("Очистить кеш")
+                                }
+                            }
+                        )
+
+                        // Временные файлы
+                        ListItem(
+                            headlineContent = { Text("Временные файлы") },
+                            supportingContent = { 
+                                Text(
+                                    "Файлы предпросмотра и временные файлы импорта/экспорта (${formatSize(cacheStats.filesSize)})",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            },
+                            leadingContent = {
+                                Icon(
+                                    Icons.Default.InsertDriveFile,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            trailingContent = {
+                                TextButton(
+                                    onClick = { showClearFilesCacheConfirmation = true },
+                                    enabled = cacheStats.filesSize > 0
+                                ) {
+                                    Text("Очистить")
+                                }
+                            }
+                        )
+                    }
+                }
+            }
 
             if (notes.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "Корзина пуста",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "Корзина пуста",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             } else {
                 // Список удаленных заметок
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp)
-                ) {
-                    items(notes) { note ->
-                        TrashNoteItem(
-                            note = note,
-                            retentionPeriod = currentRetentionPeriod,
-                            onRestore = { onRestoreNote(note.id) },
-                            onDelete = { onDeleteNote(note.id) }
-                        )
-                    }
+                items(notes) { note ->
+                    TrashNoteItem(
+                        note = note,
+                        retentionPeriod = currentRetentionPeriod,
+                        onRestore = { onRestoreNote(note.id) },
+                        onDelete = { onDeleteNote(note.id) }
+                    )
                 }
             }
         }
@@ -125,6 +228,100 @@ fun TrashScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showClearConfirmation = false }) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+
+    // Диалоги подтверждения очистки кеша
+    if (showClearCacheConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showClearCacheConfirmation = false },
+            title = { Text("Очистить весь кеш?") },
+            text = { 
+                Text(
+                    "Будут удалены все кешированные данные, включая изображения и файлы. " +
+                    "Это действие нельзя отменить."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onClearCache()
+                        showClearCacheConfirmation = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Очистить")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearCacheConfirmation = false }) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+
+    if (showClearImagesCacheConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showClearImagesCacheConfirmation = false },
+            title = { Text("Очистить кеш изображений?") },
+            text = { 
+                Text(
+                    "Будут удалены все кешированные изображения. " +
+                    "Это действие нельзя отменить."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onClearImagesCache()
+                        showClearImagesCacheConfirmation = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Очистить")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearImagesCacheConfirmation = false }) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+
+    if (showClearFilesCacheConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showClearFilesCacheConfirmation = false },
+            title = { Text("Очистить кеш файлов?") },
+            text = { 
+                Text(
+                    "Будут удалены все кешированные файлы. " +
+                    "Это действие нельзя отменить."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onClearFilesCache()
+                        showClearFilesCacheConfirmation = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Очистить")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearFilesCacheConfirmation = false }) {
                     Text("Отмена")
                 }
             }

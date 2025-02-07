@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +31,15 @@ import java.util.*
 import com.flesiy.Lotus.ui.components.markdown.AnimatedMarkdownContent
 import com.flesiy.Lotus.ui.components.markdown.PreviewToggleButton
 import androidx.compose.foundation.ScrollState
+import com.flesiy.Lotus.ui.components.markdown.MarkdownPreviewScreen
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import android.net.Uri
+import androidx.compose.ui.draw.rotate
+import androidx.core.content.FileProvider
+import java.io.File
+import java.util.UUID
 
 private const val TAG = "NoteEditor"
 
@@ -65,13 +77,51 @@ fun NoteEditor(
     onSave: () -> Unit,
     onStartRecording: () -> Unit,
     onPreviewModeChange: (Boolean) -> Unit,
+    onMediaManage: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var content by remember { mutableStateOf(note.content) }
     var editorRef by remember { mutableStateOf<EditText?>(null) }
     val focusManager = LocalFocusManager.current
     var isPreviewMode by remember(note.id) { mutableStateOf(note.isPreviewMode) }
     val scrollState = rememberScrollState()
+    var showMediaDialog by remember { mutableStateOf(false) }
+
+    // Запускаем выбор изображения
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { selectedUri ->
+            // Создаем копию файла в нашем приложении
+            val imageFile = File(context.cacheDir, "images/${UUID.randomUUID()}.jpg")
+            imageFile.parentFile?.mkdirs()
+            
+            context.contentResolver.openInputStream(selectedUri)?.use { input ->
+                imageFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            // Создаем URI через FileProvider
+            val imageUri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider",
+                imageFile
+            )
+
+            // Вставляем markdown-ссылку на изображение в текст
+            val imageMarkdown = "![](${imageUri})"
+            val currentText = content
+            val cursorPosition = editorRef?.selectionStart ?: currentText.length
+            val newText = currentText.substring(0, cursorPosition) + 
+                         imageMarkdown + 
+                         currentText.substring(cursorPosition)
+            
+            content = newText
+            onContentChange(newText)
+        }
+    }
 
     // Эффект для синхронизации состояния предпросмотра
     LaunchedEffect(isPreviewMode) {
@@ -165,6 +215,15 @@ fun NoteEditor(
                                 onPreviewModeChange(isPreviewMode)
                             }
                         )
+
+                        IconButton(onClick = { showMediaDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Outlined.AttachFile,
+                                contentDescription = "Добавить файл",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.rotate(45f)
+                            )
+                        }
                     }
 
                     Button(
@@ -226,6 +285,37 @@ fun NoteEditor(
                 )
             }
         }
+    }
+
+    if (showMediaDialog) {
+        AlertDialog(
+            onDismissRequest = { showMediaDialog = false },
+            title = { Text("Добавить") },
+            text = {
+                Column {
+                    ListItem(
+                        headlineContent = { Text("Фотография") },
+                        leadingContent = {
+                            Icon(
+                                Icons.Default.Image,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        modifier = Modifier.clickable {
+                            showMediaDialog = false
+                            imagePickerLauncher.launch("image/*")
+                        }
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showMediaDialog = false }) {
+                    Text("Отмена")
+                }
+            }
+        )
     }
 }
 

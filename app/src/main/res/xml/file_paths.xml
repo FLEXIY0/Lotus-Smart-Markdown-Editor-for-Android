@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <files-path name="notes" path="notes/"/>
+    <cache-path name="images" path="images/"/>
     <external-files-path name="external_files" path="."/>
     <external-path name="external" path="."/>
 </paths> 
