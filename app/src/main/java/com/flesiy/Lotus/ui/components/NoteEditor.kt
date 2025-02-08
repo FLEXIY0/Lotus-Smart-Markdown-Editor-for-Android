@@ -44,6 +44,8 @@ import androidx.compose.foundation.ScrollState
 import com.flesiy.Lotus.ui.components.markdown.AnimatedMarkdownContent
 import com.flesiy.Lotus.ui.components.markdown.PreviewToggleButton
 import com.flesiy.Lotus.ui.components.markdown.MarkdownPreviewScreen
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 
 private const val TAG = "NoteEditor"
 
@@ -205,46 +207,45 @@ fun NoteEditor(
                         horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier.width(48.dp), // Фиксированная ширина для иконки
-                            contentAlignment = Alignment.Center
+                        AnimatedVisibility(
+                            visible = !isPreviewMode,
+                            enter = fadeIn() + slideInHorizontally(),
+                            exit = fadeOut() + slideOutHorizontally()
                         ) {
-                            if (!isPreviewMode) {
-                                IconButton(
-                                    onClick = onStartRecording,
-                                    enabled = !isPreviewMode
-                                ) {
-                                    val iconTint = when {
-                                        !isPreviewMode && isListening -> MaterialTheme.colorScheme.error
-                                        !isPreviewMode -> MaterialTheme.colorScheme.primary
-                                        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                    }
-                                    
-                                    val scale = animateFloatAsState(
-                                        targetValue = if (isListening) 1.2f else 1f,
-                                        label = "Recording scale animation"
-                                    )
-                                    
-                                    Box(
-                                        modifier = Modifier
-                                            .graphicsLayer {
-                                                scaleX = scale.value
-                                                scaleY = scale.value
-                                            }
-                                            .background(
-                                                color = if (isListening) 
-                                                    MaterialTheme.colorScheme.error.copy(alpha = 0.1f) 
-                                                else Color.Transparent,
-                                                shape = CircleShape
-                                            )
-                                            .padding(8.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
-                                            contentDescription = if (isListening) "Остановить запись" else "Начать запись",
-                                            tint = iconTint
+                            IconButton(
+                                onClick = onStartRecording,
+                                enabled = !isPreviewMode
+                            ) {
+                                val iconTint = when {
+                                    !isPreviewMode && isListening -> MaterialTheme.colorScheme.error
+                                    !isPreviewMode -> MaterialTheme.colorScheme.primary
+                                    else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                }
+                                
+                                val scale = animateFloatAsState(
+                                    targetValue = if (isListening) 1.2f else 1f,
+                                    label = "Recording scale animation"
+                                )
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .graphicsLayer {
+                                            scaleX = scale.value
+                                            scaleY = scale.value
+                                        }
+                                        .background(
+                                            color = if (isListening) 
+                                                MaterialTheme.colorScheme.error.copy(alpha = 0.1f) 
+                                            else Color.Transparent,
+                                            shape = CircleShape
                                         )
-                                    }
+                                        .padding(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
+                                        contentDescription = if (isListening) "Остановить запись" else "Начать запись",
+                                        tint = iconTint
+                                    )
                                 }
                             }
                         }
