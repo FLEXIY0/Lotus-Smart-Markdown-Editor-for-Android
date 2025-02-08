@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Save
@@ -40,6 +39,12 @@ import androidx.compose.ui.draw.rotate
 import androidx.core.content.FileProvider
 import java.io.File
 import java.util.UUID
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.ui.graphics.graphicsLayer
+import java.util.concurrent.TimeUnit
 
 private const val TAG = "NoteEditor"
 
@@ -69,6 +74,21 @@ private fun Modifier.drawScrollbar(
     }
 }
 
+@Composable
+private fun RecordingTimer(
+    elapsedTime: Long,
+    modifier: Modifier = Modifier
+) {
+    val minutes = TimeUnit.MILLISECONDS.toMinutes(elapsedTime)
+    val seconds = TimeUnit.MILLISECONDS.toSeconds(elapsedTime) % 60
+    Text(
+        text = String.format("%02d:%02d", minutes, seconds),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.error,
+        modifier = modifier
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteEditor(
@@ -78,6 +98,8 @@ fun NoteEditor(
     onStartRecording: () -> Unit,
     onPreviewModeChange: (Boolean) -> Unit,
     onMediaManage: () -> Unit = {},
+    isListening: Boolean = false,
+    elapsedTime: Long = 0L,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -200,12 +222,58 @@ fun NoteEditor(
                         horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = onStartRecording) {
-                            Icon(
-                                imageVector = Icons.Default.Mic,
-                                contentDescription = "Запись голоса",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                        Box(
+                            modifier = Modifier.width(48.dp), // Фиксированная ширина для иконки
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                if (!isPreviewMode) {
+                                    if (isListening) {
+                                        RecordingTimer(
+                                            elapsedTime = elapsedTime,
+                                            modifier = Modifier.padding(bottom = 4.dp)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = onStartRecording,
+                                        enabled = !isPreviewMode
+                                    ) {
+                                        val iconTint = when {
+                                            !isPreviewMode && isListening -> MaterialTheme.colorScheme.error
+                                            !isPreviewMode -> MaterialTheme.colorScheme.primary
+                                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                        }
+                                        
+                                        val scale = animateFloatAsState(
+                                            targetValue = if (isListening) 1.2f else 1f,
+                                            label = "Recording scale animation"
+                                        )
+                                        
+                                        Box(
+                                            modifier = Modifier
+                                                .graphicsLayer {
+                                                    scaleX = scale.value
+                                                    scaleY = scale.value
+                                                }
+                                                .background(
+                                                    color = if (isListening) 
+                                                        MaterialTheme.colorScheme.error.copy(alpha = 0.1f) 
+                                                    else Color.Transparent,
+                                                    shape = CircleShape
+                                                )
+                                                .padding(8.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
+                                                contentDescription = if (isListening) "Остановить запись" else "Начать запись",
+                                                tint = iconTint
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                         
                         PreviewToggleButton(

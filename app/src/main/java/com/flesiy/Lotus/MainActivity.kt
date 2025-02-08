@@ -300,50 +300,50 @@ fun LotusApp() {
             startDestination = "editor",
             modifier = Modifier
         ) {
-            composable(
-                route = "editor"
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Lotus") },
-                    navigationIcon = {
-                        IconButton(onClick = {
-                            scope.launch {
-                                drawerState.open()
+            composable("editor") {
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = { Text("Lotus") },
+                            navigationIcon = {
+                                IconButton(onClick = {
+                                    scope.launch {
+                                        drawerState.open()
+                                    }
+                                }) {
+                                    Icon(Icons.Default.Menu, contentDescription = "Меню")
+                                }
+                            },
+                            actions = {
+                                IconButton(onClick = {
+                                    viewModel.createNewNote()
+                                }) {
+                                    Icon(Icons.Default.Add, contentDescription = "Новая заметка")
+                                }
                             }
-                        }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Меню")
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = {
-                            viewModel.createNewNote()
-                        }) {
-                            Icon(Icons.Default.Add, contentDescription = "Новая заметка")
-                        }
+                        )
                     }
-                )
-            }
                 ) { padding ->
                     NoteEditor(
                         note = currentNote,
                         onContentChange = { content ->
                             viewModel.updateNoteContent(content)
-                            viewModel.saveNote()
                         },
                         onSave = {
                             viewModel.saveNote()
                         },
                         onStartRecording = {
-                            // TODO: Implement speech recognition
+                            if (viewModel.isListening.value) {
+                                viewModel.stopSpeechRecognition()
+                            } else {
+                                viewModel.startSpeechRecognition()
+                            }
                         },
                         onPreviewModeChange = { isPreview ->
                             viewModel.updatePreviewMode(isPreview)
                         },
-                        onMediaManage = {
-                            navController.navigate("file_management")
-                        },
+                        isListening = viewModel.isListening.collectAsState().value,
+                        elapsedTime = viewModel.elapsedTime.collectAsState().value,
                         modifier = Modifier.padding(padding)
                     )
                 }

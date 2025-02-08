@@ -8,6 +8,7 @@ import com.flesiy.Lotus.data.TrashManager
 import com.flesiy.Lotus.data.TrashNote
 import com.flesiy.Lotus.utils.FileUtils
 import com.flesiy.Lotus.utils.MarkdownUtils
+import com.flesiy.Lotus.utils.SpeechRecognitionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -73,6 +74,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _lastViewedNoteFile: MutableStateFlow<File?> = MutableStateFlow(null)
     val lastViewedNoteFile: StateFlow<File?> = _lastViewedNoteFile
 
+    private lateinit var speechRecognitionManager: SpeechRecognitionManager
+
+    val isListening: StateFlow<Boolean>
+        get() = speechRecognitionManager.isListening
+
+    val elapsedTime: StateFlow<Long>
+        get() = speechRecognitionManager.elapsedTime
+
     init {
         loadNotes()
         loadLastViewedNote()
@@ -81,6 +90,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         startMemoryMonitoring()
         initExportDirectory()
         updateCacheStats()
+        speechRecognitionManager = SpeechRecognitionManager(getApplication())
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        speechRecognitionManager.destroy()
     }
 
     private fun initExportDirectory() {
@@ -427,5 +442,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             trashManager.clearFilesCache()
             updateCacheStats()
         }
+    }
+
+    fun startSpeechRecognition() {
+        speechRecognitionManager.startListening { text, isFinal ->
+            val currentNote = _currentNote.value
+            val currentText = currentNote.content
+            val newText = if (isFinal) {
+                if (currentText.isEmpty()) {
+                    text
+                } else {
+                    "$currentText\n$text"
+                }
+            } else {
+                // Промежуточные результаты добавляем к текущей строке
+                if (currentText.isEmpty()) {
+                    text
+                } else {
+                    val lines = currentText.lines()
+                    if (lines.size > 1) {
+                        lines.dropLast(1).joinToString("\n") + "\n" + text
+                    } else {
+                        text
+                    }
+                }
+            }
+            updateNoteContent(newText)
+        }
+    }
+
+    fun stopSpeechRecognition() {
+        speechRecognitionManager.stopListening()
     }
 } 
