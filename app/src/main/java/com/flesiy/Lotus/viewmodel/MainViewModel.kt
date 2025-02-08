@@ -11,6 +11,7 @@ import com.flesiy.Lotus.data.TrashNote
 import com.flesiy.Lotus.utils.FileUtils
 import com.flesiy.Lotus.utils.MarkdownUtils
 import com.flesiy.Lotus.utils.SpeechRecognitionManager
+import com.flesiy.Lotus.utils.TextProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -458,10 +459,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         speechRecognitionManager.startListening { text, isFinal ->
             val currentNote = _currentNote.value
             val currentText = currentNote.content
+            val processedText = TextProcessor.process(text)
             val newText = if (currentText.isEmpty()) {
-                text
+                processedText
             } else {
-                "$currentText\n$text"
+                "$currentText\n$processedText"
             }
             updateNoteContent(newText)
         }
