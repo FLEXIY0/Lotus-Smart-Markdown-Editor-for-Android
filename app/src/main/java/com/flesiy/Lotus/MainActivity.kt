@@ -352,7 +352,6 @@ fun LotusApp(viewModel: MainViewModel) {
                             viewModel.updatePreviewMode(isPreview)
                         },
                         isListening = viewModel.isListening.collectAsState().value,
-                        elapsedTime = viewModel.elapsedTime.collectAsState().value,
                         modifier = Modifier.padding(padding)
                     )
                 }
