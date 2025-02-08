@@ -33,6 +33,8 @@ import kotlin.math.roundToInt
 import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
+    private var viewModelInstance: MainViewModel? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -41,18 +43,25 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    LotusApp()
+                    val viewModel: MainViewModel = viewModel()
+                    viewModelInstance = viewModel
+                    viewModel.setActivity(this)
+                    LotusApp(viewModel)
                 }
             }
         }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        viewModelInstance?.handleSpeechResult(requestCode, resultCode, data)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LotusApp() {
+fun LotusApp(viewModel: MainViewModel) {
     val navController = rememberNavController()
-    val viewModel: MainViewModel = viewModel()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val notes by viewModel.notes.collectAsState()

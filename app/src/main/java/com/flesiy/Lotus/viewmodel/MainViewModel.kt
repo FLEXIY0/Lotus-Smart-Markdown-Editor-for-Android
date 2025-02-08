@@ -1,6 +1,8 @@
 package com.flesiy.Lotus.viewmodel
 
+import android.app.Activity
 import android.app.Application
+import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.flesiy.Lotus.data.UserPreferences
@@ -91,6 +93,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         initExportDirectory()
         updateCacheStats()
         speechRecognitionManager = SpeechRecognitionManager(getApplication())
+    }
+
+    fun setActivity(activity: Activity) {
+        speechRecognitionManager.setActivity(activity)
     }
 
     override fun onCleared() {
@@ -444,28 +450,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun handleSpeechResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        speechRecognitionManager.handleActivityResult(requestCode, resultCode, data)
+    }
+
     fun startSpeechRecognition() {
         speechRecognitionManager.startListening { text, isFinal ->
             val currentNote = _currentNote.value
             val currentText = currentNote.content
-            val newText = if (isFinal) {
-                if (currentText.isEmpty()) {
-                    text
-                } else {
-                    "$currentText\n$text"
-                }
+            val newText = if (currentText.isEmpty()) {
+                text
             } else {
-                // Промежуточные результаты добавляем к текущей строке
-                if (currentText.isEmpty()) {
-                    text
-                } else {
-                    val lines = currentText.lines()
-                    if (lines.size > 1) {
-                        lines.dropLast(1).joinToString("\n") + "\n" + text
-                    } else {
-                        text
-                    }
-                }
+                "$currentText\n$text"
             }
             updateNoteContent(newText)
         }
