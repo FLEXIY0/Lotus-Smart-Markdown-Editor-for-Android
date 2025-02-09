@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -259,93 +260,95 @@ fun LotusApp(
                         Divider()
                         
                         // Пункт импорта/экспорта
-                        ListItem(
-                            headlineContent = { Text("Загрузка и отправка") },
-                            supportingContent = {
-                                Column {
-                                    Text(
-                                        text = "Экспорт, импорт и отправка заметок",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Row(
-                                        modifier = Modifier.padding(top = 4.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        val context = LocalContext.current
-                                        val exportDirectory by viewModel.exportDirectory.collectAsState(initial = null)
-                                        val lastViewedFile by viewModel.lastViewedNoteFile.collectAsState(initial = null)
+                        if (viewModel.isFileManagementEnabled.collectAsState().value) {
+                            ListItem(
+                                headlineContent = { Text("Загрузка и отправка") },
+                                supportingContent = {
+                                    Column {
+                                        Text(
+                                            text = "Экспорт, импорт и отправка заметок",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Row(
+                                            modifier = Modifier.padding(top = 4.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            val context = LocalContext.current
+                                            val exportDirectory by viewModel.exportDirectory.collectAsState(initial = null)
+                                            val lastViewedFile by viewModel.lastViewedNoteFile.collectAsState(initial = null)
 
-                                        AssistChip(
-                                            onClick = { 
-                                                exportDirectory?.let { dir ->
-                                                    val intent = Intent(Intent.ACTION_VIEW)
-                                                    intent.setDataAndType(
-                                                        FileProvider.getUriForFile(
-                                                            context,
-                                                            "${context.packageName}.provider",
-                                                            dir
-                                                        ),
-                                                        "*/*"
-                                                    )
-                                                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                    context.startActivity(intent)
-                                                }
-                                            },
-                                            label = { Text("Хранилище") },
-                                            leadingIcon = {
-                                                Icon(
-                                                    Icons.Default.FolderOpen,
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                            },
-                                            enabled = exportDirectory != null
-                                        )
-                                        AssistChip(
-                                            onClick = { 
-                                                lastViewedFile?.let { file ->
-                                                    val intent = Intent(Intent.ACTION_SEND)
-                                                    intent.type = "text/plain"
-                                                    intent.putExtra(
-                                                        Intent.EXTRA_STREAM,
-                                                        FileProvider.getUriForFile(
-                                                            context,
-                                                            "${context.packageName}.provider",
-                                                            file
+                                            AssistChip(
+                                                onClick = { 
+                                                    exportDirectory?.let { dir ->
+                                                        val intent = Intent(Intent.ACTION_VIEW)
+                                                        intent.setDataAndType(
+                                                            FileProvider.getUriForFile(
+                                                                context,
+                                                                "${context.packageName}.provider",
+                                                                dir
+                                                            ),
+                                                            "*/*"
                                                         )
+                                                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                        context.startActivity(intent)
+                                                    }
+                                                },
+                                                label = { Text("Хранилище") },
+                                                leadingIcon = {
+                                                    Icon(
+                                                        Icons.Default.FolderOpen,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(16.dp)
                                                     )
-                                                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                    context.startActivity(Intent.createChooser(intent, "Отправить заметку"))
-                                                }
-                                            },
-                                            label = { Text("Отправка") },
-                                            leadingIcon = {
-                                                Icon(
-                                                    Icons.Default.Share,
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                            },
-                                            enabled = lastViewedFile != null
-                                        )
+                                                },
+                                                enabled = exportDirectory != null
+                                            )
+                                            AssistChip(
+                                                onClick = { 
+                                                    lastViewedFile?.let { file ->
+                                                        val intent = Intent(Intent.ACTION_SEND)
+                                                        intent.type = "text/plain"
+                                                        intent.putExtra(
+                                                            Intent.EXTRA_STREAM,
+                                                            FileProvider.getUriForFile(
+                                                                context,
+                                                                "${context.packageName}.provider",
+                                                                file
+                                                            )
+                                                        )
+                                                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                        context.startActivity(Intent.createChooser(intent, "Отправить заметку"))
+                                                    }
+                                                },
+                                                label = { Text("Отправка") },
+                                                leadingIcon = {
+                                                    Icon(
+                                                        Icons.Default.Share,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                },
+                                                enabled = lastViewedFile != null
+                                            )
+                                        }
                                     }
+                                },
+                                leadingContent = {
+                                    Icon(
+                                        Icons.Default.SwapHoriz,
+                                        contentDescription = "Загрузка и отправка",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                },
+                                modifier = Modifier.clickable {
+                                    scope.launch {
+                                        drawerState.close()
+                                    }
+                                    navigateSafely("file_management")
                                 }
-                            },
-                            leadingContent = {
-                                Icon(
-                                    Icons.Default.SwapHoriz,
-                                    contentDescription = "Загрузка и отправка",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            modifier = Modifier.clickable {
-                                scope.launch {
-                                    drawerState.close()
-                                }
-                                navigateSafely("file_management")
-                            }
-                        )
+                            )
+                        }
                         
                         Divider()
                         
@@ -415,9 +418,9 @@ fun LotusApp(
                             },
                             leadingContent = {
                                 Icon(
-                                    Icons.Default.Storage,
+                                    Icons.Default.Memory,
                                     contentDescription = "Использование памяти",
-                                    tint = MaterialTheme.colorScheme.primary
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             },
                             modifier = Modifier.clickable {

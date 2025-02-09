@@ -95,6 +95,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isGroqEnabled = MutableStateFlow(true)
     val isGroqEnabled = _isGroqEnabled.asStateFlow()
 
+    private val _isFileManagementEnabled = MutableStateFlow(false)
+    val isFileManagementEnabled = _isFileManagementEnabled.asStateFlow()
+
     private val _systemPrompt = MutableStateFlow<String?>(null)
     val systemPrompt = _systemPrompt.asStateFlow()
 
@@ -546,5 +549,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setSystemPrompt(prompt: String) {
         _systemPrompt.value = prompt
         GroqTextProcessor.setSystemPrompt(prompt)
+    }
+
+    fun setFileManagementEnabled(enabled: Boolean) {
+        _isFileManagementEnabled.value = enabled
     }
 } 

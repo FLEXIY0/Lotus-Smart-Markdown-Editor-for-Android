@@ -104,9 +104,9 @@ fun TrashScreen(
                             supportingContent = { Text(formatSize(cacheStats.totalSize)) },
                             leadingContent = {
                                 Icon(
-                                    Icons.Default.Storage,
+                                    Icons.Default.Memory,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             },
                             trailingContent = {
