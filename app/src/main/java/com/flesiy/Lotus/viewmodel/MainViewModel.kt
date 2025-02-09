@@ -2,6 +2,7 @@ package com.flesiy.Lotus.viewmodel
 
 import android.app.Activity
 import android.app.Application
+import android.content.ContentValues.TAG
 import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,6 +13,7 @@ import com.flesiy.Lotus.utils.FileUtils
 import com.flesiy.Lotus.utils.MarkdownUtils
 import com.flesiy.Lotus.utils.SpeechRecognitionManager
 import com.flesiy.Lotus.utils.TextProcessor
+import com.flesiy.Lotus.utils.GroqTextProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,6 +23,8 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import android.util.Log
+import kotlinx.coroutines.flow.asStateFlow
 
 data class Note(
     val id: Long,
@@ -85,8 +89,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val elapsedTime: StateFlow<Long>
         get() = speechRecognitionManager.elapsedTime
 
-    private val _isTextProcessorEnabled = MutableStateFlow(true)
-    val isTextProcessorEnabled: StateFlow<Boolean> = _isTextProcessorEnabled
+    private val _isTextProcessorEnabled = MutableStateFlow(false)
+    val isTextProcessorEnabled = _isTextProcessorEnabled.asStateFlow()
+
+    private val _isGroqEnabled = MutableStateFlow(true)
+    val isGroqEnabled = _isGroqEnabled.asStateFlow()
+
+    private val TAG = "SPEECH_DEBUG"
 
     init {
         loadNotes()
@@ -459,28 +468,75 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startSpeechRecognition() {
+        Log.d(TAG, "🎙️ Запуск распознавания речи")
         speechRecognitionManager.startListening { text, isFinal ->
-            val currentNote = _currentNote.value
-            val currentText = currentNote.content
-            val processedText = if (_isTextProcessorEnabled.value) {
-                TextProcessor.process(text)
-            } else {
-                text
+            Log.d(TAG, "📝 Получен текст от распознавания: '$text', isFinal: $isFinal")
+            viewModelScope.launch {
+                val currentNote = _currentNote.value
+                val currentText = currentNote.content
+                Log.d(TAG, "📋 Текущий текст заметки: '$currentText'")
+                
+                Log.d(TAG, "⚙️ Настройки обработки: TextProcessor=${_isTextProcessorEnabled.value}, Groq=${_isGroqEnabled.value}")
+                val processedText = when {
+                    _isGroqEnabled.value -> {
+                        Log.d(TAG, "🤖 Отправка текста в Groq")
+                        processTextWithGroq(text)
+                    }
+                    _isTextProcessorEnabled.value -> {
+                        Log.d(TAG, "🔧 Обработка через TextProcessor")
+                        TextProcessor.process(text)
+                    }
+                    else -> {
+                        Log.d(TAG, "➡️ Текст без обработки")
+                        text
+                    }
+                }
+                
+                val newText = if (currentText.isEmpty()) {
+                    Log.d(TAG, "📝 Создание новой заметки с текстом")
+                    processedText
+                } else {
+                    Log.d(TAG, "📝 Добавление текста к существующей заметке")
+                    "$currentText\n$processedText"
+                }
+                
+                Log.d(TAG, "💾 Обновление содержимого заметки")
+                updateNoteContent(newText)
             }
-            val newText = if (currentText.isEmpty()) {
-                processedText
-            } else {
-                "$currentText\n$processedText"
-            }
-            updateNoteContent(newText)
         }
     }
 
     fun stopSpeechRecognition() {
+        Log.d(TAG, "🛑 Остановка распознавания речи")
         speechRecognitionManager.stopListening()
     }
 
     fun setTextProcessorEnabled(enabled: Boolean) {
         _isTextProcessorEnabled.value = enabled
+    }
+
+    fun setGroqEnabled(enabled: Boolean) {
+        _isGroqEnabled.value = enabled
+    }
+
+    private suspend fun processTextWithGroq(text: String): String {
+        Log.d(TAG, "🤖 Начало обработки текста через Groq: '$text'")
+        return try {
+            val result = GroqTextProcessor.processText(text)
+            Log.d(TAG, "📥 Получен результат от Groq")
+            result.fold(
+                onSuccess = { processedText -> 
+                    Log.d(TAG, "✅ Успешная обработка Groq: '$processedText'")
+                    processedText 
+                },
+                onFailure = { error ->
+                    Log.e(TAG, "❌ Ошибка обработки Groq", error)
+                    text
+                }
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "💥 Исключение при обработке Groq", e)
+            text
+        }
     }
 } 

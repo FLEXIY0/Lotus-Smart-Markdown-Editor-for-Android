@@ -1,5 +1,6 @@
 package com.flesiy.Lotus.ui.components
 
+import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -8,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.flesiy.Lotus.viewmodel.MainViewModel
@@ -19,7 +21,11 @@ fun DeveloperRoom(
     viewModel: MainViewModel,
     modifier: Modifier = Modifier
 ) {
-    var isTextProcessorEnabled by remember { mutableStateOf(viewModel.isTextProcessorEnabled.value) }
+    val isTextProcessorEnabled by viewModel.isTextProcessorEnabled.collectAsState()
+    val isGroqEnabled by viewModel.isGroqEnabled.collectAsState()
+    var showErrorDialog by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
     BackHandler {
         onBack()
@@ -100,8 +106,63 @@ fun DeveloperRoom(
                         Switch(
                             checked = isTextProcessorEnabled,
                             onCheckedChange = { enabled ->
-                                isTextProcessorEnabled = enabled
+                                if (enabled && isGroqEnabled) {
+                                    viewModel.setGroqEnabled(false)
+                                }
                                 viewModel.setTextProcessorEnabled(enabled)
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "AI постобработка (Groq)",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                if (isGroqEnabled) {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        shape = MaterialTheme.shapes.small
+                                    ) {
+                                        Text(
+                                            text = "Активно",
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                }
+                            }
+                            Text(
+                                text = "Использование ИИ для исправления текста",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = isGroqEnabled,
+                            onCheckedChange = { enabled ->
+                                if (enabled) {
+                                    if (context.checkSelfPermission(android.Manifest.permission.INTERNET) 
+                                        != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                        showErrorDialog = true
+                                        errorMessage = "Для работы AI требуется разрешение на доступ в интернет"
+                                        return@Switch
+                                    }
+                                    viewModel.setTextProcessorEnabled(false)
+                                }
+                                viewModel.setGroqEnabled(enabled)
                             }
                         )
                     }
@@ -126,11 +187,30 @@ fun DeveloperRoom(
                     Text(
                         text = "• Расширенная аналитика использования памяти\n" +
                               "• Инструменты отладки\n" +
-                              "• Экспериментальные функции редактора",
+                              "• Экспериментальные функции редактора\n" +
+                              "• AI постобработка текста",
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
         }
     }
+
+    if (showErrorDialog) {
+        AlertDialog(
+            onDismissRequest = { showErrorDialog = false },
+            title = { Text("Ошибка") },
+            text = { Text(errorMessage) },
+            confirmButton = {
+                TextButton(onClick = { showErrorDialog = false }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+}
+
+private fun checkInternetPermission(context: Context): Boolean {
+    return context.checkSelfPermission(android.Manifest.permission.INTERNET) == 
+        android.content.pm.PackageManager.PERMISSION_GRANTED
 } 
