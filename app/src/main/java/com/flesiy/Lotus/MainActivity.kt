@@ -1,42 +1,112 @@
 package com.flesiy.Lotus
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.addCallback
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.core.content.FileProvider
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.flesiy.Lotus.ui.components.DeveloperRoom
+import com.flesiy.Lotus.ui.components.FileManagementScreen
 import com.flesiy.Lotus.ui.components.NoteEditor
 import com.flesiy.Lotus.ui.components.NotesList
 import com.flesiy.Lotus.ui.components.TrashScreen
-import com.flesiy.Lotus.ui.components.FileManagementScreen
 import com.flesiy.Lotus.ui.theme.LotusTheme
 import com.flesiy.Lotus.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntOffset
-import kotlin.math.roundToInt
-import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
     private var viewModelInstance: MainViewModel? = null
+    private var backPressedTime = 0L
+    private val doubleBackPressedInterval = 2000L
+    private var currentNavController: NavController? = null
+    private var isNavigating = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        onBackPressedDispatcher.addCallback(this) {
+            if (isNavigating) return@addCallback
+            
+            isNavigating = true
+            val navController = currentNavController
+            when {
+                navController == null -> {
+                    handleDefaultBack()
+                }
+                navController.currentBackStackEntry?.destination?.route != "editor" -> {
+                    navController.popBackStack(
+                        route = "editor",
+                        inclusive = false
+                    )
+                }
+                       else -> {
+                    handleDefaultBack()
+                }
+            }
+            isNavigating = false
+        }
+
         setContent {
             LotusTheme {
                 Surface(
@@ -46,9 +116,23 @@ class MainActivity : ComponentActivity() {
                     val viewModel: MainViewModel = viewModel()
                     viewModelInstance = viewModel
                     viewModel.setActivity(this)
-                    LotusApp(viewModel)
+                    LotusApp(
+                        viewModel = viewModel,
+                        onNavControllerCreated = { navController ->
+                            currentNavController = navController
+                        }
+                    )
                 }
             }
+        }
+    }
+
+    private fun handleDefaultBack() {
+        if (backPressedTime + doubleBackPressedInterval > System.currentTimeMillis()) {
+            finish()
+        } else {
+            Toast.makeText(this, "Нажмите ещё раз для выхода", Toast.LENGTH_SHORT).show()
+            backPressedTime = System.currentTimeMillis()
         }
     }
 
@@ -60,8 +144,27 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LotusApp(viewModel: MainViewModel) {
+fun LotusApp(
+    viewModel: MainViewModel,
+    onNavControllerCreated: (NavController) -> Unit
+) {
     val navController = rememberNavController()
+    
+    // Функция для безопасной навигации
+    fun navigateSafely(route: String) {
+        val currentRoute = navController.currentBackStackEntry?.destination?.route
+        if (currentRoute != route) {
+            navController.navigate(route) {
+                // Очищаем весь стек до стартовой точки
+                popUpTo(navController.graph.findStartDestination().id) {
+                    inclusive = true
+                }
+                // Предотвращаем создание дубликатов
+                launchSingleTop = true
+            }
+        }
+    }
+    
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val notes by viewModel.notes.collectAsState()
@@ -71,13 +174,25 @@ fun LotusApp(viewModel: MainViewModel) {
     val isTrashOverLimit by viewModel.isTrashOverLimit.collectAsState()
     val currentRetentionPeriod by viewModel.currentRetentionPeriod.collectAsState()
     
+    // Сохраняем ссылку на NavController
+    LaunchedEffect(navController) {
+        onNavControllerCreated(navController)
+    }
+    
     // Добавляем ключ для перезапуска списка
     var notesListKey by remember { mutableStateOf(0) }
     
     // Отслеживаем состояние drawer'а
     LaunchedEffect(drawerState.currentValue) {
         if (drawerState.currentValue == DrawerValue.Closed) {
-            notesListKey++ // Увеличиваем ключ при закрытии меню
+            notesListKey++
+        }
+    }
+    
+    // Обработчик кнопки "назад" для Compose
+    BackHandler(enabled = drawerState.isOpen) {
+        scope.launch {
+            drawerState.close()
         }
     }
 
@@ -106,26 +221,32 @@ fun LotusApp(viewModel: MainViewModel) {
                     notes = notes,
                     onNoteClick = { noteId ->
                         viewModel.loadNote(noteId)
-                                    viewModel.updateLastViewedNoteFile()
+                        viewModel.updateLastViewedNoteFile()
                         scope.launch {
                             drawerState.close()
+                            // Очищаем бэкстек и переходим сразу к редактору
+                            navController.navigate("editor") {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    inclusive = true
+                                }
+                                launchSingleTop = true
+                            }
                         }
-                        navController.navigate("editor")
                     },
                     onNoteDelete = { noteId ->
                         viewModel.deleteNote(noteId)
-                                },
-                                onNotePinned = { noteId ->
-                                    viewModel.toggleNotePinned(noteId)
-                                },
-                                onNoteMove = { fromIndex, toIndex ->
-                                    viewModel.moveNote(fromIndex, toIndex)
-                                },
-                                skipDeleteConfirmation = viewModel.skipDeleteConfirmation.collectAsState().value,
-                                onSkipDeleteConfirmationChange = { skip ->
-                                    viewModel.setSkipDeleteConfirmation(skip)
-                                }
-                            )
+                    },
+                    onNotePinned = { noteId ->
+                        viewModel.toggleNotePinned(noteId)
+                    },
+                    onNoteMove = { fromIndex, toIndex ->
+                        viewModel.moveNote(fromIndex, toIndex)
+                    },
+                    skipDeleteConfirmation = viewModel.skipDeleteConfirmation.collectAsState().value,
+                    onSkipDeleteConfirmationChange = { skip ->
+                        viewModel.setSkipDeleteConfirmation(skip)
+                    }
+                )
                         }
                     }
                     
@@ -222,7 +343,7 @@ fun LotusApp(viewModel: MainViewModel) {
                                 scope.launch {
                                     drawerState.close()
                                 }
-                                navController.navigate("file_management")
+                                navigateSafely("file_management")
                             }
                         )
                         
@@ -256,7 +377,7 @@ fun LotusApp(viewModel: MainViewModel) {
                                 scope.launch {
                                     drawerState.close()
                                 }
-                                navController.navigate("trash")
+                                navigateSafely("trash")
                             }
                         )
                         
@@ -295,8 +416,15 @@ fun LotusApp(viewModel: MainViewModel) {
                             leadingContent = {
                                 Icon(
                                     Icons.Default.Storage,
-                                    contentDescription = "Использование памяти"
+                                    contentDescription = "Использование памяти",
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
+                            },
+                            modifier = Modifier.clickable {
+                                scope.launch {
+                                    drawerState.close()
+                                }
+                                navigateSafely("developer_room")
                             }
                         )
                     }
@@ -309,7 +437,11 @@ fun LotusApp(viewModel: MainViewModel) {
             startDestination = "editor",
             modifier = Modifier
         ) {
-            composable("editor") {
+            composable(
+                route = "editor",
+                popEnterTransition = { fadeIn() },
+                popExitTransition = { fadeOut() }
+            ) {
                 Scaffold(
                     topBar = {
                         TopAppBar(
@@ -358,7 +490,11 @@ fun LotusApp(viewModel: MainViewModel) {
             }
             
             composable(
-                route = "trash"
+                route = "trash",
+                enterTransition = { slideInHorizontally { it } },
+                exitTransition = { slideOutHorizontally { -it } },
+                popEnterTransition = { slideInHorizontally { -it } },
+                popExitTransition = { slideOutHorizontally { it } }
             ) {
                 TrashScreen(
                     notes = trashNotes,
@@ -394,7 +530,11 @@ fun LotusApp(viewModel: MainViewModel) {
             }
 
             composable(
-                route = "file_management"
+                route = "file_management",
+                enterTransition = { slideInHorizontally { it } },
+                exitTransition = { slideOutHorizontally { -it } },
+                popEnterTransition = { slideInHorizontally { -it } },
+                popExitTransition = { slideOutHorizontally { it } }
             ) {
                 FileManagementScreen(
                     viewModel = viewModel,
@@ -402,6 +542,21 @@ fun LotusApp(viewModel: MainViewModel) {
                         navController.popBackStack()
                     },
                     modifier = Modifier
+                )
+            }
+
+            composable(
+                route = "developer_room",
+                enterTransition = { slideInHorizontally { it } },
+                exitTransition = { slideOutHorizontally { -it } },
+                popEnterTransition = { slideInHorizontally { -it } },
+                popExitTransition = { slideOutHorizontally { it } }
+            ) {
+                DeveloperRoom(
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    viewModel = viewModel
                 )
             }
         }

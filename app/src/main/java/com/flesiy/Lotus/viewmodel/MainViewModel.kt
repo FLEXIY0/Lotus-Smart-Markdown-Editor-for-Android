@@ -85,6 +85,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val elapsedTime: StateFlow<Long>
         get() = speechRecognitionManager.elapsedTime
 
+    private val _isTextProcessorEnabled = MutableStateFlow(true)
+    val isTextProcessorEnabled: StateFlow<Boolean> = _isTextProcessorEnabled
+
     init {
         loadNotes()
         loadLastViewedNote()
@@ -459,7 +462,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         speechRecognitionManager.startListening { text, isFinal ->
             val currentNote = _currentNote.value
             val currentText = currentNote.content
-            val processedText = TextProcessor.process(text)
+            val processedText = if (_isTextProcessorEnabled.value) {
+                TextProcessor.process(text)
+            } else {
+                text
+            }
             val newText = if (currentText.isEmpty()) {
                 processedText
             } else {
@@ -471,5 +478,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun stopSpeechRecognition() {
         speechRecognitionManager.stopListening()
+    }
+
+    fun setTextProcessorEnabled(enabled: Boolean) {
+        _isTextProcessorEnabled.value = enabled
     }
 } 
