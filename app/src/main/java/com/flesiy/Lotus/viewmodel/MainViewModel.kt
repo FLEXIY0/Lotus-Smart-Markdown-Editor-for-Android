@@ -95,6 +95,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isGroqEnabled = MutableStateFlow(true)
     val isGroqEnabled = _isGroqEnabled.asStateFlow()
 
+    private val _systemPrompt = MutableStateFlow<String?>(null)
+    val systemPrompt = _systemPrompt.asStateFlow()
+
     private val TAG = "SPEECH_DEBUG"
 
     init {
@@ -538,5 +541,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             Log.e(TAG, "💥 Исключение при обработке Groq", e)
             text
         }
+    }
+
+    fun setSystemPrompt(prompt: String) {
+        _systemPrompt.value = prompt
+        GroqTextProcessor.setSystemPrompt(prompt)
     }
 } 
