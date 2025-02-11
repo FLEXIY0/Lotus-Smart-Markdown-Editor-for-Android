@@ -111,14 +111,12 @@ fun NoteEditor(
     onSave: () -> Unit,
     onStartRecording: () -> Unit,
     onPreviewModeChange: (Boolean) -> Unit,
-    onMediaManage: () -> Unit = {},
     isListening: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var content by remember { mutableStateOf(note.content) }
     var editorRef by remember { mutableStateOf<EditText?>(null) }
-    val focusManager = LocalFocusManager.current
     var isPreviewMode by remember(note.id) { mutableStateOf(note.isPreviewMode) }
     val scrollState = rememberScrollState()
     var showMediaDialog by remember { mutableStateOf(false) }
@@ -349,7 +347,6 @@ fun NoteEditor(
                 AnimatedMarkdownContent(
                     content = content,
                     onContentChange = { newValue ->
-                        Log.d(TAG, "Content changed: $newValue")
                         content = newValue
                         onContentChange(newValue)
                     },

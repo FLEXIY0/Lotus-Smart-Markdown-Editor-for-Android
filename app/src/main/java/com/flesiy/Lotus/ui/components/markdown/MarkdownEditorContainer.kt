@@ -6,9 +6,32 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.flesiy.Lotus.ui.components.CustomMarkdownEditor
 
 @Composable
 fun MarkdownEditorContainer(
+    content: String,
+    onContentChange: (String) -> Unit,
+    isPreviewMode: Boolean,
+    modifier: Modifier = Modifier
+) {
+    if (isPreviewMode) {
+        MarkdownPreview(
+            content = content,
+            onContentChange = onContentChange,
+            modifier = modifier
+        )
+    } else {
+        CustomMarkdownEditor(
+            value = content,
+            onValueChange = onContentChange,
+            modifier = modifier
+        )
+    }
+}
+
+@Composable
+fun MarkdownEditorContainerWithToggle(
     content: String,
     onContentChange: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -37,6 +60,7 @@ fun MarkdownEditorContainer(
             // Редактор/Превью с анимированным переходом
             MarkdownPreviewScreen(
                 content = content,
+                onContentChange = onContentChange,
                 isPreviewMode = isPreviewMode,
                 modifier = Modifier
                     .fillMaxSize()

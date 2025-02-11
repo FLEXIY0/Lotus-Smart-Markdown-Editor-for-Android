@@ -3,6 +3,7 @@ package com.flesiy.Lotus.ui.components.markdown
 import android.widget.EditText
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.flesiy.Lotus.ui.components.CustomMarkdownEditor
@@ -13,8 +14,8 @@ fun AnimatedMarkdownContent(
     onContentChange: (String) -> Unit,
     isPreviewMode: Boolean,
     modifier: Modifier = Modifier,
-    hint: String? = "Соберитесь с мыслями...",
-    onEditorCreated: (EditText) -> Unit = {}
+    hint: String = "",
+    onEditorCreated: ((EditText) -> Unit)? = null
 ) {
     Crossfade(
         targetState = isPreviewMode,
@@ -24,15 +25,18 @@ fun AnimatedMarkdownContent(
         if (inPreviewMode) {
             MarkdownPreview(
                 content = content,
+                onContentChange = onContentChange,
                 modifier = modifier
             )
         } else {
             CustomMarkdownEditor(
                 value = content,
                 onValueChange = onContentChange,
-                modifier = modifier,
-                hint = if (content.isEmpty()) hint else null,
-                onEditorCreated = onEditorCreated
+                modifier = Modifier.fillMaxWidth(),
+                hint = hint,
+                onEditorCreated = { editor -> 
+                    onEditorCreated?.invoke(editor)
+                }
             )
         }
     }

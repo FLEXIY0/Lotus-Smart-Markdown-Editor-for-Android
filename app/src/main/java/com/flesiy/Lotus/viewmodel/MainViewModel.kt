@@ -101,6 +101,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _systemPrompt = MutableStateFlow<String?>(null)
     val systemPrompt = _systemPrompt.asStateFlow()
 
+    private val _isTodoEnabled = MutableStateFlow(true)
+    val isTodoEnabled = _isTodoEnabled.asStateFlow()
+
     private val TAG = "SPEECH_DEBUG"
 
     init {
@@ -553,5 +556,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setFileManagementEnabled(enabled: Boolean) {
         _isFileManagementEnabled.value = enabled
+    }
+
+    fun setTodoEnabled(enabled: Boolean) {
+        _isTodoEnabled.value = enabled
     }
 } 

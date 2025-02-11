@@ -13,6 +13,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.flesiy.Lotus.viewmodel.MainViewModel
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 private const val DEFAULT_SYSTEM_PROMPT = """When a user sends you a message:
 
@@ -42,6 +44,7 @@ fun DeveloperRoom(
     
     var systemPrompt by remember { mutableStateOf(DEFAULT_SYSTEM_PROMPT) }
     var showPromptEditor by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
 
     BackHandler {
         onBack()
@@ -63,6 +66,7 @@ fun DeveloperRoom(
             modifier = modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(scrollState)
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -269,6 +273,57 @@ fun DeveloperRoom(
                             checked = viewModel.isFileManagementEnabled.collectAsState().value,
                             onCheckedChange = { enabled ->
                                 viewModel.setFileManagementEnabled(enabled)
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Divider()
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "TODO чекбоксы",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (viewModel.isTodoEnabled.collectAsState().value) {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        shape = MaterialTheme.shapes.small
+                                    ) {
+                                        Text(
+                                            text = "Активно",
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                }
+                            }
+                            Text(
+                                text = "Экспериментальная функция чекбоксов в режиме предпросмотра. Может работать нестабильно.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Switch(
+                            checked = viewModel.isTodoEnabled.collectAsState().value,
+                            onCheckedChange = { enabled ->
+                                viewModel.setTodoEnabled(enabled)
                             }
                         )
                     }
