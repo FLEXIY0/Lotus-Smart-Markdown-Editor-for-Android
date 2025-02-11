@@ -73,6 +73,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import android.view.inputmethod.InputMethodManager
+import android.content.Context
 
 private const val TAG = "NoteEditor"
 
@@ -167,6 +169,13 @@ fun NoteEditor(
     LaunchedEffect(note.id, note.content) {
         content = note.content
         isPreviewMode = note.isPreviewMode
+        if (note.content.isEmpty()) {
+            editorRef?.requestFocus()
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            editorRef?.let { editor ->
+                imm.showSoftInput(editor, InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
     }
 
     Scaffold(

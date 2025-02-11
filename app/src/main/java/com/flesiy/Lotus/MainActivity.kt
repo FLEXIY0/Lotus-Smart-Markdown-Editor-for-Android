@@ -28,10 +28,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.RemoveCircle
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -476,6 +478,21 @@ fun LotusApp(
                                 }
                             },
                             actions = {
+                                IconButton(
+                                    onClick = {
+                                        val currentNoteId = currentNote.id
+                                        viewModel.deleteNote(currentNoteId)
+                                        viewModel.createNewNote()
+                                    },
+                                    modifier = Modifier.size(48.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Clear,
+                                        contentDescription = "Удалить заметку",
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
                                 IconButton(onClick = {
                                     viewModel.createNewNote()
                                 }) {
