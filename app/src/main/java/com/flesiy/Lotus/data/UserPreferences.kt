@@ -13,6 +13,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class UserPreferences(private val context: Context) {
     private val SKIP_DELETE_CONFIRMATION = booleanPreferencesKey("skip_delete_confirmation")
     private val TRASH_RETENTION_PERIOD = intPreferencesKey("trash_retention_period")
+    private val TODO_ENABLED = booleanPreferencesKey("todo_enabled")
     private val NOTE_DELETION_TIME_PREFIX = "note_deletion_time_"
 
     val skipDeleteConfirmation: Flow<Boolean> = context.dataStore.data
@@ -60,6 +61,17 @@ class UserPreferences(private val context: Context) {
     suspend fun removeNoteDeletionTime(noteId: Long) {
         context.dataStore.edit { preferences ->
             preferences.remove(longPreferencesKey("${NOTE_DELETION_TIME_PREFIX}$noteId"))
+        }
+    }
+
+    val todoEnabled: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[TODO_ENABLED] ?: true
+        }
+
+    suspend fun setTodoEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[TODO_ENABLED] = enabled
         }
     }
 } 

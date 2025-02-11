@@ -115,6 +115,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         initExportDirectory()
         updateCacheStats()
         speechRecognitionManager = SpeechRecognitionManager(getApplication())
+        loadTodoEnabled()
     }
 
     fun setActivity(activity: Activity) {
@@ -559,6 +560,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setTodoEnabled(enabled: Boolean) {
-        _isTodoEnabled.value = enabled
+        viewModelScope.launch {
+            userPreferences.setTodoEnabled(enabled)
+            _isTodoEnabled.value = enabled
+        }
+    }
+
+    private fun loadTodoEnabled() {
+        viewModelScope.launch {
+            userPreferences.todoEnabled.collect { enabled ->
+                _isTodoEnabled.value = enabled
+            }
+        }
     }
 } 
