@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -100,13 +101,12 @@ class MainActivity : ComponentActivity() {
                 navController == null -> {
                     handleDefaultBack()
                 }
-                navController.currentBackStackEntry?.destination?.route != "editor" -> {
-                    navController.popBackStack(
-                        route = "editor",
-                        inclusive = false
-                    )
+                navController.previousBackStackEntry != null -> {
+                    // Если есть предыдущий экран в стеке, возвращаемся к нему
+                    navController.popBackStack()
                 }
-                       else -> {
+                else -> {
+                    // Если мы на главном экране, показываем сообщение о двойном нажатии
                     handleDefaultBack()
                 }
             }
@@ -156,17 +156,19 @@ fun LotusApp(
 ) {
     val navController = rememberNavController()
     
-    // Функция для безопасной навигации
+    // Функция для безопасной навигации с анимацией
     fun navigateSafely(route: String) {
         val currentRoute = navController.currentBackStackEntry?.destination?.route
         if (currentRoute != route) {
             navController.navigate(route) {
-                // Очищаем весь стек до стартовой точки
-                popUpTo(navController.graph.findStartDestination().id) {
-                    inclusive = true
+                // Сохраняем стек навигации для корректной работы кнопки назад
+                popUpTo("editor") {
+                    saveState = true
                 }
                 // Предотвращаем создание дубликатов
                 launchSingleTop = true
+                // Восстанавливаем состояние при возврате
+                restoreState = true
             }
         }
     }
@@ -450,12 +452,12 @@ fun LotusApp(
         NavHost(
             navController = navController,
             startDestination = "editor",
-            modifier = Modifier
+            modifier = Modifier.fillMaxSize()
         ) {
             composable(
                 route = "editor",
-                popEnterTransition = { fadeIn() },
-                popExitTransition = { fadeOut() }
+                enterTransition = { fadeIn(animationSpec = tween(300)) },
+                exitTransition = { fadeOut(animationSpec = tween(300)) }
             ) {
                 Scaffold(
                     topBar = {
@@ -528,11 +530,34 @@ fun LotusApp(
             
             composable(
                 route = "trash",
-                enterTransition = { slideInHorizontally { it } },
-                exitTransition = { slideOutHorizontally { -it } },
-                popEnterTransition = { slideInHorizontally { -it } },
-                popExitTransition = { slideOutHorizontally { it } }
+                enterTransition = { 
+                    slideInHorizontally(
+                        initialOffsetX = { it },
+                        animationSpec = tween(300)
+                    ) + fadeIn(animationSpec = tween(300))
+                },
+                exitTransition = { 
+                    slideOutHorizontally(
+                        targetOffsetX = { -it },
+                        animationSpec = tween(300)
+                    ) + fadeOut(animationSpec = tween(300))
+                },
+                popEnterTransition = { 
+                    slideInHorizontally(
+                        initialOffsetX = { -it },
+                        animationSpec = tween(300)
+                    ) + fadeIn(animationSpec = tween(300))
+                },
+                popExitTransition = { 
+                    slideOutHorizontally(
+                        targetOffsetX = { it },
+                        animationSpec = tween(300)
+                    ) + fadeOut(animationSpec = tween(300))
+                }
             ) {
+                BackHandler {
+                    navController.popBackStack()
+                }
                 TrashScreen(
                     notes = trashNotes,
                     currentRetentionPeriod = currentRetentionPeriod,
@@ -568,11 +593,34 @@ fun LotusApp(
 
             composable(
                 route = "file_management",
-                enterTransition = { slideInHorizontally { it } },
-                exitTransition = { slideOutHorizontally { -it } },
-                popEnterTransition = { slideInHorizontally { -it } },
-                popExitTransition = { slideOutHorizontally { it } }
+                enterTransition = { 
+                    slideInHorizontally(
+                        initialOffsetX = { it },
+                        animationSpec = tween(300)
+                    ) + fadeIn(animationSpec = tween(300))
+                },
+                exitTransition = { 
+                    slideOutHorizontally(
+                        targetOffsetX = { -it },
+                        animationSpec = tween(300)
+                    ) + fadeOut(animationSpec = tween(300))
+                },
+                popEnterTransition = { 
+                    slideInHorizontally(
+                        initialOffsetX = { -it },
+                        animationSpec = tween(300)
+                    ) + fadeIn(animationSpec = tween(300))
+                },
+                popExitTransition = { 
+                    slideOutHorizontally(
+                        targetOffsetX = { it },
+                        animationSpec = tween(300)
+                    ) + fadeOut(animationSpec = tween(300))
+                }
             ) {
+                BackHandler {
+                    navController.popBackStack()
+                }
                 FileManagementScreen(
                     viewModel = viewModel,
                     onBack = {
@@ -584,11 +632,34 @@ fun LotusApp(
 
             composable(
                 route = "developer_room",
-                enterTransition = { slideInHorizontally { it } },
-                exitTransition = { slideOutHorizontally { -it } },
-                popEnterTransition = { slideInHorizontally { -it } },
-                popExitTransition = { slideOutHorizontally { it } }
+                enterTransition = { 
+                    slideInHorizontally(
+                        initialOffsetX = { it },
+                        animationSpec = tween(300)
+                    ) + fadeIn(animationSpec = tween(300))
+                },
+                exitTransition = { 
+                    slideOutHorizontally(
+                        targetOffsetX = { -it },
+                        animationSpec = tween(300)
+                    ) + fadeOut(animationSpec = tween(300))
+                },
+                popEnterTransition = { 
+                    slideInHorizontally(
+                        initialOffsetX = { -it },
+                        animationSpec = tween(300)
+                    ) + fadeIn(animationSpec = tween(300))
+                },
+                popExitTransition = { 
+                    slideOutHorizontally(
+                        targetOffsetX = { it },
+                        animationSpec = tween(300)
+                    ) + fadeOut(animationSpec = tween(300))
+                }
             ) {
+                BackHandler {
+                    navController.popBackStack()
+                }
                 DeveloperRoom(
                     onBack = {
                         navController.popBackStack()

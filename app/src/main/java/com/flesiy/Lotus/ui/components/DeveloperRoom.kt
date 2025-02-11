@@ -46,17 +46,20 @@ fun DeveloperRoom(
     var showPromptEditor by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
-    BackHandler {
-        onBack()
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Комната разработчика") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.padding(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Назад",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             )
