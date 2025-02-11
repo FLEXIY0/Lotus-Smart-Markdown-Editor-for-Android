@@ -1,7 +1,9 @@
 package com.flesiy.Lotus
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
@@ -59,6 +61,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -168,6 +171,8 @@ fun LotusApp(
     
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val view = LocalView.current
     val notes by viewModel.notes.collectAsState()
     val currentNote by viewModel.currentNote.collectAsState()
     val trashNotes by viewModel.trashNotes.collectAsState()
@@ -187,6 +192,11 @@ fun LotusApp(
     LaunchedEffect(drawerState.currentValue) {
         if (drawerState.currentValue == DrawerValue.Closed) {
             notesListKey++
+        } else if (drawerState.currentValue == DrawerValue.Open) {
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            view.findFocus()?.let { focusedView ->
+                imm.hideSoftInputFromWindow(focusedView.windowToken, 0)
+            }
         }
     }
     
@@ -447,11 +457,18 @@ fun LotusApp(
             ) {
                 Scaffold(
                     topBar = {
+                        val context = LocalContext.current
+                        val view = LocalView.current
+                        
                         TopAppBar(
                             title = { Text("Lotus") },
                             navigationIcon = {
                                 IconButton(onClick = {
                                     scope.launch {
+                                        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                                        view.findFocus()?.let { focusedView ->
+                                            imm.hideSoftInputFromWindow(focusedView.windowToken, 0)
+                                        }
                                         drawerState.open()
                                     }
                                 }) {

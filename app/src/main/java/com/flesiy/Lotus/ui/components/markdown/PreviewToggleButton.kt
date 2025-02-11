@@ -1,5 +1,7 @@
 package com.flesiy.Lotus.ui.components.markdown
 
+import android.content.Context
+import android.view.inputmethod.InputMethodManager
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.size
@@ -13,6 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -35,8 +39,15 @@ fun PreviewToggleButton(
         label = "tint"
     )
 
+    val context = LocalContext.current
+    val view = LocalView.current
+
     IconButton(
-        onClick = onToggle,
+        onClick = {
+            onToggle()
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.hideSoftInputFromWindow(view.windowToken, 0)
+        },
         modifier = modifier
     ) {
         Icon(
