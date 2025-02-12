@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,10 +22,11 @@ fun VersionHistoryPanel(
     selectedVersion: NoteVersion?,
     onVersionSelected: (NoteVersion?) -> Unit,
     onApplyVersion: () -> Unit,
+    onDeleteVersion: (NoteVersion) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()) }
-    val reversedVersions = remember(versions) { versions.reversed() }
+    val sortedVersions = remember(versions) { versions.sortedBy { it.createdAt } }
 
     AnimatedVisibility(
         visible = true,
@@ -37,7 +40,7 @@ fun VersionHistoryPanel(
                 .padding(16.dp)
         ) {
             Text(
-                text = "История версий",
+                text = "Система контроля версий заметок",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -49,16 +52,23 @@ fun VersionHistoryPanel(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
+                // Вычисляем steps только если есть хотя бы 2 версии
+                val stepsCount = if (sortedVersions.size > 1) {
+                    sortedVersions.size - 2
+                } else {
+                    0
+                }
+                
                 Slider(
                     value = selectedVersion?.let { selected ->
-                        reversedVersions.indexOf(selected).toFloat()
-                    } ?: 0f,
+                        sortedVersions.indexOf(selected).toFloat()
+                    } ?: (sortedVersions.size - 1).toFloat(),
                     onValueChange = { value ->
-                        val index = value.toInt().coerceIn(0, reversedVersions.size - 1)
-                        onVersionSelected(reversedVersions.getOrNull(index))
+                        val index = value.toInt().coerceIn(0, sortedVersions.size - 1)
+                        onVersionSelected(sortedVersions.getOrNull(index))
                     },
-                    valueRange = 0f..(reversedVersions.size - 1).toFloat(),
-                    steps = reversedVersions.size - 2,
+                    valueRange = 0f..(sortedVersions.size - 1).toFloat(),
+                    steps = stepsCount,
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -82,6 +92,16 @@ fun VersionHistoryPanel(
                                     text = "Создано: ${dateFormat.format(Date(version.createdAt))}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            
+                            IconButton(
+                                onClick = { onDeleteVersion(version) }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Удалить версию",
+                                    tint = MaterialTheme.colorScheme.error
                                 )
                             }
                         }

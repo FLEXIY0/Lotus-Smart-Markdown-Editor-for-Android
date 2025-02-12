@@ -551,6 +551,9 @@ fun LotusApp(
                         onApplyVersion = {
                             viewModel.applySelectedVersion()
                         },
+                        onDeleteVersion = { version ->
+                            viewModel.deleteVersion(version)
+                        },
                         modifier = Modifier.padding(padding)
                     )
                 }

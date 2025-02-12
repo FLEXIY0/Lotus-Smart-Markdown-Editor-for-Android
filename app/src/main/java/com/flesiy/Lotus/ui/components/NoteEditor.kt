@@ -123,18 +123,19 @@ fun NoteEditor(
     onToggleVersionHistory: () -> Unit = {},
     onVersionSelected: (NoteVersion?) -> Unit = {},
     onApplyVersion: () -> Unit = {},
+    onDeleteVersion: (NoteVersion) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var content by remember { mutableStateOf(note.content) }
     var editorRef by remember { mutableStateOf<EditText?>(null) }
-    var isPreviewMode by remember(note.id) { mutableStateOf(note.isPreviewMode) }
+    var isPreviewMode by remember(note.id) { mutableStateOf(note.content.isNotEmpty()) }
     val scrollState = rememberScrollState()
     var showMediaDialog by remember { mutableStateOf(false) }
 
     // Эффект для отображения выбранной версии в режиме предпросмотра
-    LaunchedEffect(selectedVersion, isPreviewMode) {
-        if (isPreviewMode && selectedVersion != null) {
+    LaunchedEffect(selectedVersion, isPreviewMode, isVersionHistoryVisible) {
+        if (isPreviewMode && selectedVersion != null && isVersionHistoryVisible) {
             content = selectedVersion.content
         } else if (!isVersionHistoryVisible) {
             content = note.content
@@ -149,11 +150,11 @@ fun NoteEditor(
     }
 
     // Эффект для обновления состояния при смене заметки
-    LaunchedEffect(note.id, note.content) {
+    LaunchedEffect(note.id, note.content, isVersionHistoryVisible) {
         if (!isVersionHistoryVisible) {
             content = note.content
+            isPreviewMode = note.isPreviewMode
         }
-        isPreviewMode = note.isPreviewMode
         if (note.content.isEmpty()) {
             editorRef?.requestFocus()
             val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -259,7 +260,8 @@ fun NoteEditor(
                             versions = versions,
                             selectedVersion = selectedVersion,
                             onVersionSelected = onVersionSelected,
-                            onApplyVersion = onApplyVersion
+                            onApplyVersion = onApplyVersion,
+                            onDeleteVersion = onDeleteVersion
                         )
                     }
                 }

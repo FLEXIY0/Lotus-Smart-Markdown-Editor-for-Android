@@ -33,7 +33,7 @@ data class Note(
     val content: String,
     val modifiedAt: Long = System.currentTimeMillis(),
     val createdAt: Long = System.currentTimeMillis(),
-    val isPreviewMode: Boolean = false,
+    val isPreviewMode: Boolean = true,
     val isPinned: Boolean = false,
     val order: Int = 0
 )
@@ -267,9 +267,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updatePreviewMode(isPreviewMode: Boolean) {
         val currentNote = _currentNote.value
         _currentNote.value = currentNote.copy(isPreviewMode = isPreviewMode)
-        viewModelScope.launch(Dispatchers.IO) {
-            FileUtils.saveNotePreviewMode(getApplication(), currentNote.id, isPreviewMode)
-        }
     }
 
     fun saveNote() {
@@ -317,7 +314,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 } else {
                     val file = File(FileUtils.getNotesDirectory(getApplication()), "$noteId.md")
-                    val isPreviewMode = FileUtils.readNotePreviewMode(getApplication(), noteId)
                     val isPinned = FileUtils.readNotePinned(getApplication(), noteId)
                     val order = FileUtils.readNoteOrder(getApplication(), noteId)
                     _currentNote.value = Note(
@@ -327,7 +323,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         content = content,
                         modifiedAt = file.lastModified(),
                         createdAt = noteId,
-                        isPreviewMode = isPreviewMode,
+                        isPreviewMode = true,
                         isPinned = isPinned,
                         order = order
                     )
@@ -623,5 +619,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _selectedVersion.value = null
         _isVersionHistoryVisible.value = false
         saveNote()
+    }
+
+    fun deleteVersion(version: NoteVersion) {
+        viewModelScope.launch {
+            val currentVersions = _noteVersions.value.toMutableList()
+            val index = currentVersions.indexOfFirst { it.id == version.id }
+            
+            if (index != -1) {
+                currentVersions.removeAt(index)
+                
+                // Если удаляем текущую версию, откатываемся на предыдущую
+                if (_selectedVersion.value?.id == version.id) {
+                    val previousVersion = currentVersions.getOrNull(index.coerceAtMost(currentVersions.size - 1))
+                    _selectedVersion.value = previousVersion
+                    
+                    // Если это была последняя версия, применяем предыдущую автоматически
+                    if (previousVersion != null) {
+                        _currentNote.value = _currentNote.value.copy(
+                            content = previousVersion.content,
+                            title = previousVersion.title,
+                            modifiedAt = System.currentTimeMillis()
+                        )
+                    }
+                }
+                
+                _noteVersions.value = currentVersions
+            }
+        }
     }
 } 
