@@ -23,10 +23,13 @@ fun VersionHistoryPanel(
     onVersionSelected: (NoteVersion?) -> Unit,
     onApplyVersion: () -> Unit,
     onDeleteVersion: (NoteVersion) -> Unit = {},
+    noteId: Long,
     modifier: Modifier = Modifier
 ) {
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()) }
-    val sortedVersions = remember(versions) { versions.sortedBy { it.createdAt } }
+    val noteVersions = remember(versions, noteId) { 
+        versions.filter { it.noteId == noteId }.sortedBy { it.createdAt } 
+    }
 
     AnimatedVisibility(
         visible = true,
@@ -45,88 +48,124 @@ fun VersionHistoryPanel(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            if (versions.isEmpty()) {
+            if (noteVersions.isEmpty()) {
                 Text(
                     text = "Нет сохраненных версий",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
-                // Вычисляем steps только если есть хотя бы 2 версии
-                val stepsCount = if (sortedVersions.size > 1) {
-                    sortedVersions.size - 2
-                } else {
-                    0
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Старые версии",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Новые версии",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
                 
-                Slider(
-                    value = selectedVersion?.let { selected ->
-                        sortedVersions.indexOf(selected).toFloat()
-                    } ?: (sortedVersions.size - 1).toFloat(),
-                    onValueChange = { value ->
-                        val index = value.toInt().coerceIn(0, sortedVersions.size - 1)
-                        onVersionSelected(sortedVersions.getOrNull(index))
-                    },
-                    valueRange = 0f..(sortedVersions.size - 1).toFloat(),
-                    steps = stepsCount,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                val currentValue = selectedVersion?.let { selected ->
+                    noteVersions.indexOf(selected).coerceIn(0, noteVersions.size - 1).toFloat()
+                } ?: (noteVersions.size - 1).toFloat()
 
-                selectedVersion?.let { version ->
-                    Column(
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Slider(
+                        value = currentValue,
+                        onValueChange = { value ->
+                            val safeValue = value.coerceIn(0f, (noteVersions.size - 1).toFloat())
+                            val index = safeValue.toInt()
+                            if (index >= 0 && index < noteVersions.size) {
+                                onVersionSelected(noteVersions[index])
+                            }
+                        },
+                        valueRange = 0f..(noteVersions.size - 1).toFloat(),
+                        steps = (noteVersions.size - 2).coerceAtLeast(0),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                    
+                    // Показываем номер версии
+                    Text(
+                        text = "Версия ${(currentValue + 1).toInt()} из ${noteVersions.size}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                selectedVersion?.let { version ->
+                    // Проверяем, что выбранная версия принадлежит текущей заметке
+                    if (version.noteId == noteId) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 16.dp)
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = version.title.ifEmpty { "Без названия" },
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = "Создано: ${dateFormat.format(Date(version.createdAt))}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            
-                            IconButton(
-                                onClick = { onDeleteVersion(version) }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "Удалить версию",
-                                    tint = MaterialTheme.colorScheme.error
-                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = version.title.ifEmpty { "Без названия" },
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        text = "Создано: ${dateFormat.format(Date(version.createdAt))}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                
+                                IconButton(
+                                    onClick = { onDeleteVersion(version) }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Удалить версию",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+
+                            // Кнопки действий
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedButton(
+                                    onClick = { onVersionSelected(null) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Отмена")
+                                }
+                                Button(
+                                    onClick = onApplyVersion,
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    )
+                                ) {
+                                    Text("Применить")
+                                }
                             }
                         }
-
-                        // Кнопки действий
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            OutlinedButton(
-                                onClick = { onVersionSelected(null) },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Отмена")
-                            }
-                            Button(
-                                onClick = onApplyVersion,
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary
-                                )
-                            ) {
-                                Text("Применить")
-                            }
+                    } else {
+                        // Если версия не принадлежит текущей заметке, сбрасываем выбор
+                        LaunchedEffect(Unit) {
+                            onVersionSelected(null)
                         }
                     }
                 }

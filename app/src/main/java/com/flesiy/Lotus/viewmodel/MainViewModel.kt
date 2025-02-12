@@ -278,10 +278,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 content = note.content,
                 title = note.title
             )
-            _noteVersions.value = (_noteVersions.value + newVersion)
-                .filter { it.noteId == note.id }
+            
+            // Обновляем список версий, сохраняя только версии текущей заметки
+            val currentNoteVersions = _noteVersions.value.filter { it.noteId == note.id }
+            val otherNotesVersions = _noteVersions.value.filter { it.noteId != note.id }
+            
+            _noteVersions.value = otherNotesVersions + (currentNoteVersions + newVersion)
                 .sortedByDescending { it.createdAt }
-                .take(50) // Ограничиваем количество версий
+                .take(50) // Ограничиваем количество версий для текущей заметки
 
             FileUtils.saveNote(getApplication(), note.id, note.content)
             FileUtils.saveNotePreviewMode(getApplication(), note.id, note.isPreviewMode)
@@ -328,6 +332,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         order = order
                     )
                 }
+                // Сбрасываем выбранную версию при смене заметки
+                _selectedVersion.value = null
                 // Сохраняем ID просматриваемой заметки
                 FileUtils.saveLastViewedNoteId(getApplication(), noteId)
             } catch (e: Exception) {
@@ -631,7 +637,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 
                 // Если удаляем текущую версию, откатываемся на предыдущую
                 if (_selectedVersion.value?.id == version.id) {
-                    val previousVersion = currentVersions.getOrNull(index.coerceAtMost(currentVersions.size - 1))
+                    // Находим предыдущую версию для той же заметки
+                    val previousVersion = currentVersions
+                        .filter { it.noteId == version.noteId }
+                        .maxByOrNull { it.createdAt }
+                    
                     _selectedVersion.value = previousVersion
                     
                     // Если это была последняя версия, применяем предыдущую автоматически

@@ -144,13 +144,17 @@ fun NoteEditor(
     }
 
     // Обновляем контент при изменении версии
-    LaunchedEffect(selectedVersion, isPreviewMode, isVersionHistoryVisible) {
+    LaunchedEffect(selectedVersion, isPreviewMode, isVersionHistoryVisible, note.id) {
         if (isPreviewMode && selectedVersion != null && isVersionHistoryVisible) {
-            content = selectedVersion.content
-            // Не сбрасываем hasUnsavedChanges, так как это временный просмотр
+            // Проверяем, что версия принадлежит текущей заметке
+            if (selectedVersion.noteId == note.id) {
+                content = selectedVersion.content
+            } else {
+                // Если версия от другой заметки, сбрасываем выбор
+                onVersionSelected(null)
+            }
         } else if (!isVersionHistoryVisible) {
             content = note.content
-            // Не сбрасываем hasUnsavedChanges, возвращаемся к текущему состоянию
         }
     }
 
@@ -264,7 +268,8 @@ fun NoteEditor(
                             selectedVersion = selectedVersion,
                             onVersionSelected = onVersionSelected,
                             onApplyVersion = onApplyVersion,
-                            onDeleteVersion = onDeleteVersion
+                            onDeleteVersion = onDeleteVersion,
+                            noteId = note.id
                         )
                     }
                 }
