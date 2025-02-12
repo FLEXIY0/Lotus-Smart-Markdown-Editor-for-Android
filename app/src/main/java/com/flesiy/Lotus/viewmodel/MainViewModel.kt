@@ -38,12 +38,29 @@ data class Note(
     val order: Int = 0
 )
 
+data class NoteVersion(
+    val id: Long = System.currentTimeMillis(),
+    val noteId: Long,
+    val content: String,
+    val title: String,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _notes = MutableStateFlow<List<Note>>(emptyList())
     val notes: StateFlow<List<Note>> = _notes
 
     private val _currentNote = MutableStateFlow(Note(0L, "", "", "", 0L, 0L))
     val currentNote: StateFlow<Note> = _currentNote
+
+    private val _noteVersions = MutableStateFlow<List<NoteVersion>>(emptyList())
+    val noteVersions: StateFlow<List<NoteVersion>> = _noteVersions
+
+    private val _isVersionHistoryVisible = MutableStateFlow(false)
+    val isVersionHistoryVisible: StateFlow<Boolean> = _isVersionHistoryVisible
+
+    private val _selectedVersion = MutableStateFlow<NoteVersion?>(null)
+    val selectedVersion: StateFlow<NoteVersion?> = _selectedVersion
 
     private val userPreferences = UserPreferences(application)
     private val trashManager = TrashManager(application)
@@ -258,6 +275,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun saveNote() {
         viewModelScope.launch(Dispatchers.IO) {
             val note = _currentNote.value
+            // Сохраняем текущую версию как новую
+            val newVersion = NoteVersion(
+                noteId = note.id,
+                content = note.content,
+                title = note.title
+            )
+            _noteVersions.value = (_noteVersions.value + newVersion)
+                .filter { it.noteId == note.id }
+                .sortedByDescending { it.createdAt }
+                .take(50) // Ограничиваем количество версий
+
             FileUtils.saveNote(getApplication(), note.id, note.content)
             FileUtils.saveNotePreviewMode(getApplication(), note.id, note.isPreviewMode)
             loadNotes()
@@ -572,5 +600,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _isTodoEnabled.value = enabled
             }
         }
+    }
+
+    fun toggleVersionHistory() {
+        _isVersionHistoryVisible.value = !_isVersionHistoryVisible.value
+        if (!_isVersionHistoryVisible.value) {
+            _selectedVersion.value = null
+        }
+    }
+
+    fun selectVersion(version: NoteVersion?) {
+        _selectedVersion.value = version
+    }
+
+    fun applySelectedVersion() {
+        val selectedVer = _selectedVersion.value ?: return
+        _currentNote.value = _currentNote.value.copy(
+            content = selectedVer.content,
+            title = selectedVer.title,
+            modifiedAt = System.currentTimeMillis()
+        )
+        _selectedVersion.value = null
+        _isVersionHistoryVisible.value = false
+        saveNote()
     }
 } 

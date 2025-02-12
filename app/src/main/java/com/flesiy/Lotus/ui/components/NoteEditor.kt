@@ -11,6 +11,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,6 +35,7 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -68,6 +71,7 @@ import androidx.core.content.FileProvider
 import com.flesiy.Lotus.ui.components.markdown.AnimatedMarkdownContent
 import com.flesiy.Lotus.ui.components.markdown.PreviewToggleButton
 import com.flesiy.Lotus.viewmodel.Note
+import com.flesiy.Lotus.viewmodel.NoteVersion
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -75,6 +79,7 @@ import java.util.Locale
 import java.util.UUID
 import android.view.inputmethod.InputMethodManager
 import android.content.Context
+import androidx.compose.foundation.layout.size
 
 private const val TAG = "NoteEditor"
 
@@ -112,6 +117,12 @@ fun NoteEditor(
     onStartRecording: () -> Unit,
     onPreviewModeChange: (Boolean) -> Unit,
     isListening: Boolean = false,
+    versions: List<NoteVersion> = emptyList(),
+    selectedVersion: NoteVersion? = null,
+    isVersionHistoryVisible: Boolean = false,
+    onToggleVersionHistory: () -> Unit = {},
+    onVersionSelected: (NoteVersion?) -> Unit = {},
+    onApplyVersion: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -120,6 +131,37 @@ fun NoteEditor(
     var isPreviewMode by remember(note.id) { mutableStateOf(note.isPreviewMode) }
     val scrollState = rememberScrollState()
     var showMediaDialog by remember { mutableStateOf(false) }
+
+    // Эффект для отображения выбранной версии в режиме предпросмотра
+    LaunchedEffect(selectedVersion, isPreviewMode) {
+        if (isPreviewMode && selectedVersion != null) {
+            content = selectedVersion.content
+        } else if (!isVersionHistoryVisible) {
+            content = note.content
+        }
+    }
+
+    // Эффект для синхронизации состояния предпросмотра
+    LaunchedEffect(isPreviewMode) {
+        if (isPreviewMode != note.isPreviewMode) {
+            onPreviewModeChange(isPreviewMode)
+        }
+    }
+
+    // Эффект для обновления состояния при смене заметки
+    LaunchedEffect(note.id, note.content) {
+        if (!isVersionHistoryVisible) {
+            content = note.content
+        }
+        isPreviewMode = note.isPreviewMode
+        if (note.content.isEmpty()) {
+            editorRef?.requestFocus()
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            editorRef?.let { editor ->
+                imm.showSoftInput(editor, InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
+    }
 
     // Запускаем выбор изображения
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -156,26 +198,6 @@ fun NoteEditor(
         }
     }
 
-    // Эффект для синхронизации состояния предпросмотра
-    LaunchedEffect(isPreviewMode) {
-        if (isPreviewMode != note.isPreviewMode) {
-            onPreviewModeChange(isPreviewMode)
-        }
-    }
-
-    // Эффект для обновления состояния при смене заметки
-    LaunchedEffect(note.id, note.content) {
-        content = note.content
-        isPreviewMode = note.isPreviewMode
-        if (note.content.isEmpty()) {
-            editorRef?.requestFocus()
-            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            editorRef?.let { editor ->
-                imm.showSoftInput(editor, InputMethodManager.SHOW_IMPLICIT)
-            }
-        }
-    }
-
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -186,10 +208,11 @@ fun NoteEditor(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -202,14 +225,19 @@ fun NoteEditor(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
 
-                        Text(
-                            text = "${content.split(Regex("\\s+")).count()} слов",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontFamily = FontFamily.Default,
-                                fontWeight = FontWeight.Light
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
+                        Row(
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "${content.split(Regex("\\s+")).count()} слов",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontFamily = FontFamily.Default,
+                                    fontWeight = FontWeight.Light
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
                     }
 
                     Text(
@@ -219,8 +247,21 @@ fun NoteEditor(
                             fontWeight = FontWeight.Light
                         ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.padding(top = 4.dp)
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
+
+                    AnimatedVisibility(
+                        visible = isVersionHistoryVisible && isPreviewMode,
+                        enter = expandVertically(),
+                        exit = shrinkVertically()
+                    ) {
+                        VersionHistoryPanel(
+                            versions = versions,
+                            selectedVersion = selectedVersion,
+                            onVersionSelected = onVersionSelected,
+                            onApplyVersion = onApplyVersion
+                        )
+                    }
                 }
             }
         },

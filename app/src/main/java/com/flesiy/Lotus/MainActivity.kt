@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.RemoveCircle
@@ -480,6 +481,21 @@ fun LotusApp(
                                 }
                             },
                             actions = {
+                                if (currentNote.isPreviewMode) {
+                                    IconButton(
+                                        onClick = { viewModel.toggleVersionHistory() },
+                                        modifier = Modifier.size(48.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.History,
+                                            contentDescription = "История версий",
+                                            tint = if (viewModel.isVersionHistoryVisible.collectAsState().value)
+                                                MaterialTheme.colorScheme.primary
+                                            else
+                                                MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
                                 IconButton(
                                     onClick = {
                                         val currentNoteId = currentNote.id
@@ -523,6 +539,18 @@ fun LotusApp(
                             viewModel.updatePreviewMode(isPreview)
                         },
                         isListening = viewModel.isListening.collectAsState().value,
+                        versions = viewModel.noteVersions.collectAsState().value,
+                        selectedVersion = viewModel.selectedVersion.collectAsState().value,
+                        isVersionHistoryVisible = viewModel.isVersionHistoryVisible.collectAsState().value,
+                        onToggleVersionHistory = {
+                            viewModel.toggleVersionHistory()
+                        },
+                        onVersionSelected = { version ->
+                            viewModel.selectVersion(version)
+                        },
+                        onApplyVersion = {
+                            viewModel.applySelectedVersion()
+                        },
                         modifier = Modifier.padding(padding)
                     )
                 }
