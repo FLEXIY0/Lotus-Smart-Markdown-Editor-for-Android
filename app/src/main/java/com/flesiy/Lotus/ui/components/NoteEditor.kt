@@ -132,35 +132,38 @@ fun NoteEditor(
     var isPreviewMode by remember(note.id) { mutableStateOf(note.content.isNotEmpty()) }
     val scrollState = rememberScrollState()
     var showMediaDialog by remember { mutableStateOf(false) }
+    
+    // Отслеживаем изменения в контенте
+    var hasUnsavedChanges by remember { mutableStateOf(false) }
+    
+    // Сброс флага при смене заметки
+    LaunchedEffect(note.id) {
+        content = note.content
+        isPreviewMode = note.isPreviewMode
+        hasUnsavedChanges = false
+    }
 
-    // Эффект для отображения выбранной версии в режиме предпросмотра
+    // Обновляем контент при изменении версии
     LaunchedEffect(selectedVersion, isPreviewMode, isVersionHistoryVisible) {
         if (isPreviewMode && selectedVersion != null && isVersionHistoryVisible) {
             content = selectedVersion.content
+            // Не сбрасываем hasUnsavedChanges, так как это временный просмотр
         } else if (!isVersionHistoryVisible) {
             content = note.content
+            // Не сбрасываем hasUnsavedChanges, возвращаемся к текущему состоянию
         }
+    }
+
+    // Функция для сохранения с обновлением состояния
+    val handleSave = {
+        onSave()
+        hasUnsavedChanges = false
     }
 
     // Эффект для синхронизации состояния предпросмотра
     LaunchedEffect(isPreviewMode) {
         if (isPreviewMode != note.isPreviewMode) {
             onPreviewModeChange(isPreviewMode)
-        }
-    }
-
-    // Эффект для обновления состояния при смене заметки
-    LaunchedEffect(note.id, note.content, isVersionHistoryVisible) {
-        if (!isVersionHistoryVisible) {
-            content = note.content
-            isPreviewMode = note.isPreviewMode
-        }
-        if (note.content.isEmpty()) {
-            editorRef?.requestFocus()
-            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            editorRef?.let { editor ->
-                imm.showSoftInput(editor, InputMethodManager.SHOW_IMPLICIT)
-            }
         }
     }
 
@@ -345,17 +348,35 @@ fun NoteEditor(
                     }
 
                     Button(
-                        onClick = onSave,
+                        onClick = handleSave,
+                        enabled = hasUnsavedChanges,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
+                            containerColor = if (hasUnsavedChanges) 
+                                MaterialTheme.colorScheme.primary 
+                            else 
+                                MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = if (hasUnsavedChanges)
+                                MaterialTheme.colorScheme.onPrimary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
                         Icon(
                             imageVector = Icons.Default.Save,
-                            contentDescription = "Сохранить"
+                            contentDescription = "Сохранить",
+                            tint = if (hasUnsavedChanges)
+                                MaterialTheme.colorScheme.onPrimary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Сохранить")
+                        Text(
+                            text = if (hasUnsavedChanges) "Сохранить*" else "Сохранить",
+                            color = if (hasUnsavedChanges)
+                                MaterialTheme.colorScheme.onPrimary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -389,9 +410,12 @@ fun NoteEditor(
             ) {
                 AnimatedMarkdownContent(
                     content = content,
-                    onContentChange = { newValue ->
-                        content = newValue
-                        onContentChange(newValue)
+                    onContentChange = { newContent ->
+                        if (newContent != note.content) {
+                            hasUnsavedChanges = true
+                        }
+                        content = newContent
+                        onContentChange(newContent)
                     },
                     isPreviewMode = isPreviewMode,
                     modifier = Modifier.fillMaxWidth(),
