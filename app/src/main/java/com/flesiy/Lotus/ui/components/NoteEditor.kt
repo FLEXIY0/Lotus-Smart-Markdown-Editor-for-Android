@@ -83,6 +83,8 @@ import com.flesiy.Lotus.ui.components.markdown.AnimatedMarkdownContent
 import com.flesiy.Lotus.ui.components.markdown.PreviewToggleButton
 import com.flesiy.Lotus.viewmodel.Note
 import com.flesiy.Lotus.viewmodel.NoteVersion
+import com.flesiy.Lotus.viewmodel.NotificationViewModel
+import com.flesiy.Lotus.viewmodel.NoteNotification
 import java.io.File
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
@@ -91,6 +93,8 @@ import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
 
 private const val TAG = "NoteEditor"
 
@@ -274,6 +278,7 @@ fun TimeMarkDialog(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteEditor(
     note: Note,
@@ -298,6 +303,12 @@ fun NoteEditor(
     val scrollState = rememberScrollState()
     var showMediaDialog by remember { mutableStateOf(false) }
     var showTimeMarkDialog by remember { mutableStateOf(false) }
+    var showNotificationsPanel by remember { mutableStateOf(false) }
+    var showNotificationDialog by remember { mutableStateOf(false) }
+    var selectedNotification by remember { mutableStateOf<NoteNotification?>(null) }
+    
+    val notificationViewModel: NotificationViewModel = viewModel()
+    val notifications by notificationViewModel.notifications.collectAsState()
     
     // Отслеживаем изменения в контенте
     var hasUnsavedChanges by remember { mutableStateOf(false) }
@@ -604,6 +615,22 @@ fun NoteEditor(
                                 )
                             }
                         }
+
+                        AnimatedVisibility(
+                            visible = isPreviewMode,
+                            enter = fadeIn(),
+                            exit = fadeOut()
+                        ) {
+                            IconButton(
+                                onClick = { showNotificationsPanel = true }
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_notification),
+                                    contentDescription = "Уведомления",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                     }
 
                     Button(
@@ -735,6 +762,43 @@ fun NoteEditor(
                 
                 onContentChange(newText)
             }
+        )
+    }
+
+    if (showNotificationsPanel) {
+        AlertDialog(
+            onDismissRequest = { showNotificationsPanel = false },
+            modifier = Modifier.fillMaxWidth(0.9f),
+            content = {
+                NotificationsPanel(
+                    notifications = notifications.filter { it.noteId == note.id },
+                    onEditNotification = { notification ->
+                        selectedNotification = notification
+                        showNotificationDialog = true
+                    },
+                    onDeleteNotification = { notification ->
+                        notificationViewModel.deleteNotification(notification)
+                    },
+                    onToggleNotification = { notification ->
+                        notificationViewModel.toggleNotification(notification)
+                    },
+                    onAddNotification = {
+                        selectedNotification = null
+                        showNotificationDialog = true
+                    }
+                )
+            }
+        )
+    }
+
+    if (showNotificationDialog) {
+        NotificationDialog(
+            initialNotification = selectedNotification,
+            onDismiss = { showNotificationDialog = false },
+            onConfirm = { notification ->
+                notificationViewModel.addNotification(notification)
+            },
+            noteId = note.id
         )
     }
 }
