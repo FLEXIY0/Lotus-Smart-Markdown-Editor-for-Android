@@ -163,7 +163,7 @@ private fun NotificationItem(
                     ))
                     notification.repeatInterval?.let { interval ->
                         if (interval != RepeatInterval.NONE) {
-                            append(" \n ")
+                            append("\n")
                             append(when(interval) {
                                 RepeatInterval.DAILY -> "Ежедневно"
                                 RepeatInterval.WEEKLY -> "Еженедельно"
