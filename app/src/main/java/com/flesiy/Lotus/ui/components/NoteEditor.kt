@@ -73,10 +73,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import com.flesiy.Lotus.R
 import com.flesiy.Lotus.ui.components.markdown.AnimatedMarkdownContent
 import com.flesiy.Lotus.ui.components.markdown.PreviewToggleButton
 import com.flesiy.Lotus.viewmodel.Note
@@ -276,18 +278,19 @@ fun TimeMarkDialog(
 fun NoteEditor(
     note: Note,
     onContentChange: (String) -> Unit,
+    onPreviewModeChange: (Boolean) -> Unit,
     onSave: () -> Unit,
     onStartRecording: () -> Unit,
-    onPreviewModeChange: (Boolean) -> Unit,
     isListening: Boolean = false,
-    versions: List<NoteVersion> = emptyList(),
     selectedVersion: NoteVersion? = null,
     isVersionHistoryVisible: Boolean = false,
     onToggleVersionHistory: () -> Unit = {},
     onVersionSelected: (NoteVersion?) -> Unit = {},
     onApplyVersion: () -> Unit = {},
     onDeleteVersion: (NoteVersion) -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    fontSize: Float = 16f,
+    versions: List<NoteVersion> = emptyList()
 ) {
     val context = LocalContext.current
     var editorRef by remember { mutableStateOf<EditText?>(null) }
@@ -510,10 +513,9 @@ fun NoteEditor(
                         ) {
                             IconButton(onClick = { showMediaDialog = true }) {
                                 Icon(
-                                    imageVector = Icons.Outlined.AttachFile,
+                                    painter = painterResource(id = R.drawable.attach_file_add_24px),
                                     contentDescription = "Добавить файл",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.rotate(45f)
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
@@ -527,7 +529,7 @@ fun NoteEditor(
                                 onClick = { showTimeMarkDialog = true }
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.CalendarToday,
+                                    painter = painterResource(id = R.drawable.calendar_add_on_24px),
                                     contentDescription = "Добавить временную метку",
                                     tint = MaterialTheme.colorScheme.primary
                                 )
@@ -609,7 +611,8 @@ fun NoteEditor(
                     hint = "Соберитесь с мыслями...",
                     onEditorCreated = { editor ->
                         editorRef = editor
-                    }
+                    },
+                    fontSize = fontSize
                 )
             }
         }

@@ -15,7 +15,8 @@ fun AnimatedMarkdownContent(
     isPreviewMode: Boolean,
     modifier: Modifier = Modifier,
     hint: String = "",
-    onEditorCreated: ((EditText) -> Unit)? = null
+    onEditorCreated: ((EditText) -> Unit)? = null,
+    fontSize: Float = 16f
 ) {
     Crossfade(
         targetState = isPreviewMode,
@@ -26,7 +27,8 @@ fun AnimatedMarkdownContent(
             MarkdownPreview(
                 content = content,
                 onContentChange = onContentChange,
-                modifier = modifier
+                modifier = modifier,
+                fontSize = fontSize
             )
         } else {
             CustomMarkdownEditor(
@@ -36,7 +38,8 @@ fun AnimatedMarkdownContent(
                 hint = hint,
                 onEditorCreated = { editor -> 
                     onEditorCreated?.invoke(editor)
-                }
+                },
+                fontSize = fontSize
             )
         }
     }

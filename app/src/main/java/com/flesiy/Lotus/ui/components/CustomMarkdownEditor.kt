@@ -220,8 +220,9 @@ fun CustomMarkdownEditor(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    hint: String? = null,
-    onEditorCreated: (EditText) -> Unit = {}
+    hint: String = "",
+    onEditorCreated: ((EditText) -> Unit)? = null,
+    fontSize: Float = 16f
 ) {
     val context = LocalContext.current
 
@@ -232,12 +233,14 @@ fun CustomMarkdownEditor(
                 context = ctx,
                 value = value,
                 onValueChange = onValueChange,
-                hint = hint
+                hint = hint,
+                fontSize = fontSize
             ).also { editor ->
-                onEditorCreated(editor)
+                onEditorCreated?.invoke(editor)
             }
         },
         update = { editText ->
+            editText.textSize = fontSize
             if (value != editText.text.toString()) {
                 val newText = SpannableStringBuilder(value)
                 editText.text = newText
@@ -251,10 +254,12 @@ private fun createEditor(
     context: Context,
     value: String,
     onValueChange: (String) -> Unit,
-    hint: String?
+    hint: String?,
+    fontSize: Float
 ): EditText {
     return ImageKeyboardEditText(context).apply {
         setText(value)
+        textSize = fontSize
         inputType = InputType.TYPE_CLASS_TEXT or 
                    InputType.TYPE_TEXT_FLAG_MULTI_LINE or
                    InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or

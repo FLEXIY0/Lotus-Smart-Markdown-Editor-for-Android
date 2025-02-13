@@ -122,6 +122,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isTodoEnabled = MutableStateFlow(true)
     val isTodoEnabled = _isTodoEnabled.asStateFlow()
 
+    private val _fontSize = MutableStateFlow(16f)
+    val fontSize = _fontSize.asStateFlow()
+
     private val TAG = "SPEECH_DEBUG"
 
     init {
@@ -135,6 +138,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadNoteVersions()
         speechRecognitionManager = SpeechRecognitionManager(getApplication())
         loadTodoEnabled()
+        loadFontSize()
     }
 
     fun setActivity(activity: Activity) {
@@ -272,7 +276,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updatePreviewMode(isPreviewMode: Boolean) {
         val currentNote = _currentNote.value
         _currentNote.value = currentNote.copy(isPreviewMode = isPreviewMode)
+        viewModelScope.launch(Dispatchers.IO) {
+            FileUtils.saveNotePreviewMode(getApplication(), currentNote.id, isPreviewMode)
+        }
     }
+
+    fun updateNotePreviewMode(isPreviewMode: Boolean) = updatePreviewMode(isPreviewMode)
 
     fun saveNote() {
         Log.d(TAG, "💾 saveNote вызван")
@@ -786,6 +795,59 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 Log.e(TAG, "Ошибка при сохранении версий", e)
             }
+        }
+    }
+
+    private fun loadFontSize() {
+        viewModelScope.launch {
+            userPreferences.fontSize.collect { size ->
+                _fontSize.value = size
+            }
+        }
+    }
+
+    fun setFontSize(size: Float) {
+        viewModelScope.launch {
+            userPreferences.setFontSize(size)
+            _fontSize.value = size
+        }
+    }
+
+    fun saveCurrentNote() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val note = _currentNote.value
+            
+            // Сохраняем текущую версию как новую
+            val newVersion = NoteVersion(
+                noteId = note.id,
+                content = note.content,
+                title = note.title
+            )
+            
+            // Обновляем список версий
+            val currentNoteVersions = _noteVersions.value.filter { it.noteId == note.id }
+            val otherNotesVersions = _noteVersions.value.filter { it.noteId != note.id }
+            
+            _noteVersions.value = otherNotesVersions + (currentNoteVersions + newVersion)
+                .sortedByDescending { it.createdAt }
+                .take(50)
+
+            // Сохраняем версии на диск
+            saveNoteVersions()
+
+            FileUtils.saveNote(getApplication(), note.id, note.content)
+            FileUtils.saveNotePreviewMode(getApplication(), note.id, note.isPreviewMode)
+            
+            withContext(Dispatchers.Main) {
+                loadNotes()
+            }
+        }
+    }
+
+    fun setVersionHistoryVisible(isVisible: Boolean) {
+        _isVersionHistoryVisible.value = isVisible
+        if (!isVisible) {
+            _selectedVersion.value = null
         }
     }
 } 

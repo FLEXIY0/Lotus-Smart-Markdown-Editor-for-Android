@@ -15,6 +15,7 @@ class UserPreferences(private val context: Context) {
     private val TRASH_RETENTION_PERIOD = intPreferencesKey("trash_retention_period")
     private val TODO_ENABLED = booleanPreferencesKey("todo_enabled")
     private val NOTE_DELETION_TIME_PREFIX = "note_deletion_time_"
+    private val FONT_SIZE = floatPreferencesKey("font_size")
 
     val skipDeleteConfirmation: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
@@ -72,6 +73,17 @@ class UserPreferences(private val context: Context) {
     suspend fun setTodoEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[TODO_ENABLED] = enabled
+        }
+    }
+
+    val fontSize: Flow<Float> = context.dataStore.data
+        .map { preferences ->
+            preferences[FONT_SIZE] ?: 16f
+        }
+
+    suspend fun setFontSize(size: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[FONT_SIZE] = size
         }
     }
 } 

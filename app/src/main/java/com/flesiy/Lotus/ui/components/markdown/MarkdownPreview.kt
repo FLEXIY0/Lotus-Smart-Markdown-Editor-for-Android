@@ -209,7 +209,8 @@ class CheckboxClickHandler(
 fun MarkdownPreview(
     content: String,
     onContentChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    fontSize: Float = 16f
 ) {
     val context = LocalContext.current
     val markwon = remember { createMarkwon(context) }
@@ -217,12 +218,13 @@ fun MarkdownPreview(
     Box(modifier = modifier) {
         AndroidView(
             factory = { ctx ->
-                createPreviewTextView(ctx).apply {
+                createPreviewTextView(ctx, fontSize).apply {
                     movementMethod = CheckboxClickHandler(content, onContentChange)
                     markwon.setMarkdown(this, content)
                 }
             },
             update = { textView ->
+                textView.textSize = fontSize
                 textView.movementMethod = CheckboxClickHandler(content, onContentChange)
                 markwon.setMarkdown(textView, content)
             }
@@ -230,9 +232,9 @@ fun MarkdownPreview(
     }
 }
 
-private fun createPreviewTextView(context: Context): TextView {
+private fun createPreviewTextView(context: Context, fontSize: Float): TextView {
     return TextView(context).apply {
-        textSize = 16f
+        textSize = fontSize
         setPadding(16, 16, 16, 16)
         setTextIsSelectable(true)
         gravity = android.view.Gravity.TOP

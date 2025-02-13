@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Memory
@@ -76,6 +77,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.flesiy.Lotus.ui.components.DeveloperRoom
 import com.flesiy.Lotus.ui.components.FileManagementScreen
+import com.flesiy.Lotus.ui.components.FontSizeDialog
 import com.flesiy.Lotus.ui.components.NoteEditor
 import com.flesiy.Lotus.ui.components.NotesList
 import com.flesiy.Lotus.ui.components.TrashScreen
@@ -156,6 +158,8 @@ fun LotusApp(
     onNavControllerCreated: (NavController) -> Unit
 ) {
     val navController = rememberNavController()
+    var showFontSizeDialog by remember { mutableStateOf(false) }
+    val fontSize by viewModel.fontSize.collectAsState()
     
     // Функция для безопасной навигации с анимацией
     fun navigateSafely(route: String) {
@@ -462,9 +466,6 @@ fun LotusApp(
             ) {
                 Scaffold(
                     topBar = {
-                        val context = LocalContext.current
-                        val view = LocalView.current
-                        
                         TopAppBar(
                             title = { Text("Lotus") },
                             navigationIcon = {
@@ -481,6 +482,9 @@ fun LotusApp(
                                 }
                             },
                             actions = {
+                                IconButton(onClick = { showFontSizeDialog = true }) {
+                                    Icon(Icons.Default.FormatSize, contentDescription = "Размер шрифта")
+                                }
                                 if (currentNote.isPreviewMode) {
                                     IconButton(
                                         onClick = { viewModel.toggleVersionHistory() },
@@ -520,33 +524,39 @@ fun LotusApp(
                         )
                     }
                 ) { padding ->
+                    val currentNote by viewModel.currentNote.collectAsState()
+                    val selectedVersion by viewModel.selectedVersion.collectAsState()
+                    val isVersionHistoryVisible by viewModel.isVersionHistoryVisible.collectAsState()
+                    val fontSize by viewModel.fontSize.collectAsState()
+                    val isListening by viewModel.isListening.collectAsState()
+                    val versions by viewModel.noteVersions.collectAsState()
+
                     NoteEditor(
                         note = currentNote,
                         onContentChange = { content ->
                             viewModel.updateNoteContent(content)
                         },
+                        onPreviewModeChange = { isPreviewMode ->
+                            viewModel.updateNotePreviewMode(isPreviewMode)
+                        },
                         onSave = {
-                            viewModel.saveNote()
+                            viewModel.saveCurrentNote()
                         },
                         onStartRecording = {
-                            if (viewModel.isListening.value) {
+                            if (isListening) {
                                 viewModel.stopSpeechRecognition()
                             } else {
                                 viewModel.startSpeechRecognition()
                             }
                         },
-                        onPreviewModeChange = { isPreview ->
-                            viewModel.updatePreviewMode(isPreview)
-                        },
-                        isListening = viewModel.isListening.collectAsState().value,
-                        versions = viewModel.noteVersions.collectAsState().value,
-                        selectedVersion = viewModel.selectedVersion.collectAsState().value,
-                        isVersionHistoryVisible = viewModel.isVersionHistoryVisible.collectAsState().value,
-                        onToggleVersionHistory = {
-                            viewModel.toggleVersionHistory()
-                        },
+                        isListening = isListening,
+                        selectedVersion = selectedVersion,
                         onVersionSelected = { version ->
                             viewModel.selectVersion(version)
+                        },
+                        isVersionHistoryVisible = isVersionHistoryVisible,
+                        onToggleVersionHistory = {
+                            viewModel.toggleVersionHistory()
                         },
                         onApplyVersion = {
                             viewModel.applySelectedVersion()
@@ -554,7 +564,9 @@ fun LotusApp(
                         onDeleteVersion = { version ->
                             viewModel.deleteVersion(version)
                         },
-                        modifier = Modifier.padding(padding)
+                        modifier = Modifier.padding(padding),
+                        fontSize = fontSize,
+                        versions = versions
                     )
                 }
             }
@@ -699,5 +711,13 @@ fun LotusApp(
                 )
             }
         }
+    }
+
+    if (showFontSizeDialog) {
+        FontSizeDialog(
+            currentSize = fontSize,
+            onSizeChange = { viewModel.setFontSize(it) },
+            onDismiss = { showFontSizeDialog = false }
+        )
     }
 }
