@@ -25,6 +25,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import android.util.Log
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 
 data class Note(
     val id: Long,
@@ -255,13 +256,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateNoteContent(content: String) {
+        Log.d(TAG, "📝 updateNoteContent вызван с текстом: '$content'")
         val currentNote = _currentNote.value
+        Log.d(TAG, "📋 Текущая заметка до обновления: '${currentNote.content}'")
         _currentNote.value = currentNote.copy(
             content = content,
             title = MarkdownUtils.extractTitle(content),
             preview = MarkdownUtils.getPreview(content),
             modifiedAt = System.currentTimeMillis()
         )
+        Log.d(TAG, "✅ Заметка обновлена, новый контент: '${_currentNote.value.content}'")
     }
 
     fun updatePreviewMode(isPreviewMode: Boolean) {
@@ -270,8 +274,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun saveNote() {
+        Log.d(TAG, "💾 saveNote вызван")
         viewModelScope.launch(Dispatchers.IO) {
             val note = _currentNote.value
+            Log.d(TAG, "📋 Сохраняем заметку с контентом: '${note.content}'")
+            
             // Сохраняем текущую версию как новую
             val newVersion = NoteVersion(
                 noteId = note.id,
@@ -285,11 +292,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             
             _noteVersions.value = otherNotesVersions + (currentNoteVersions + newVersion)
                 .sortedByDescending { it.createdAt }
-                .take(50) // Ограничиваем количество версий для текущей заметки
+                .take(50)
 
             FileUtils.saveNote(getApplication(), note.id, note.content)
             FileUtils.saveNotePreviewMode(getApplication(), note.id, note.isPreviewMode)
-            loadNotes()
+            Log.d(TAG, "✅ Заметка сохранена в файл")
+            
+            withContext(Dispatchers.Main) {
+                loadNotes()
+                Log.d(TAG, "🔄 Список заметок обновлен")
+            }
         }
     }
 
@@ -510,38 +522,77 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun startSpeechRecognition() {
         Log.d(TAG, "🎙️ Запуск распознавания речи")
         speechRecognitionManager.startListening { text, isFinal ->
-            Log.d(TAG, "📝 Получен текст от распознавания: '$text', isFinal: $isFinal")
-            viewModelScope.launch {
-                val currentNote = _currentNote.value
-                val currentText = currentNote.content
-                Log.d(TAG, "📋 Текущий текст заметки: '$currentText'")
-                
-                Log.d(TAG, "⚙️ Настройки обработки: TextProcessor=${_isTextProcessorEnabled.value}, Groq=${_isGroqEnabled.value}")
-                val processedText = when {
-                    _isGroqEnabled.value -> {
+            // Переносим всю обработку в главный поток
+            viewModelScope.launch(Dispatchers.Main) {
+                Log.d(TAG, "📝 Получен текст от распознавания: '$text', isFinal: $isFinal")
+                if (isFinal && text.isNotEmpty()) {
+                    val currentNote = _currentNote.value
+                    val currentText = currentNote.content
+                    Log.d(TAG, "📋 Текущий текст заметки: '$currentText'")
+                    
+                    Log.d(TAG, "⚙️ Настройки обработки: TextProcessor=${_isTextProcessorEnabled.value}, Groq=${_isGroqEnabled.value}")
+                    if (_isGroqEnabled.value) {
                         Log.d(TAG, "🤖 Отправка текста в Groq")
-                        processTextWithGroq(text)
+                        try {
+                            val processed = processTextWithGroq(text)
+                            val newText = if (currentText.isEmpty()) {
+                                processed.trim()
+                            } else {
+                                currentText + (if (currentText.endsWith("\n")) "" else "\n") + processed.trim()
+                            }
+                            Log.d(TAG, "✨ Подготовлен новый текст (Groq): '$newText'")
+                            _currentNote.value = currentNote.copy(
+                                content = newText,
+                                title = MarkdownUtils.extractTitle(newText),
+                                preview = MarkdownUtils.getPreview(newText),
+                                modifiedAt = System.currentTimeMillis()
+                            )
+                            saveNote()
+                        } catch (e: Exception) {
+                            Log.e(TAG, "❌ Ошибка обработки Groq", e)
+                            val newText = if (currentText.isEmpty()) {
+                                text.trim()
+                            } else {
+                                currentText + (if (currentText.endsWith("\n")) "" else "\n") + text.trim()
+                            }
+                            Log.d(TAG, "✨ Подготовлен новый текст (после ошибки Groq): '$newText'")
+                            _currentNote.value = currentNote.copy(
+                                content = newText,
+                                title = MarkdownUtils.extractTitle(newText),
+                                preview = MarkdownUtils.getPreview(newText),
+                                modifiedAt = System.currentTimeMillis()
+                            )
+                            saveNote()
+                        }
+                        return@launch
                     }
-                    _isTextProcessorEnabled.value -> {
-                        Log.d(TAG, "🔧 Обработка через TextProcessor")
-                        TextProcessor.process(text)
+                    
+                    val processedText = when {
+                        _isTextProcessorEnabled.value -> {
+                            Log.d(TAG, "🔧 Обработка через TextProcessor")
+                            TextProcessor.process(text).trim()
+                        }
+                        else -> {
+                            Log.d(TAG, "➡️ Текст без обработки")
+                            text.trim()
+                        }
                     }
-                    else -> {
-                        Log.d(TAG, "➡️ Текст без обработки")
-                        text
+                    
+                    val newText = if (currentText.isEmpty()) {
+                        processedText
+                    } else {
+                        currentText + (if (currentText.endsWith("\n")) "" else "\n") + processedText
                     }
+                    
+                    Log.d(TAG, "✨ Подготовлен новый текст: '$newText'")
+                    _currentNote.value = currentNote.copy(
+                        content = newText,
+                        title = MarkdownUtils.extractTitle(newText),
+                        preview = MarkdownUtils.getPreview(newText),
+                        modifiedAt = System.currentTimeMillis()
+                    )
+                    saveNote()
                 }
-                
-                val newText = if (currentText.isEmpty()) {
-                    Log.d(TAG, "📝 Создание новой заметки с текстом")
-                    processedText
-                } else {
-                    Log.d(TAG, "📝 Добавление текста к существующей заметке")
-                    "$currentText\n$processedText"
-                }
-                
-                Log.d(TAG, "💾 Обновление содержимого заметки")
-                updateNoteContent(newText)
             }
         }
     }

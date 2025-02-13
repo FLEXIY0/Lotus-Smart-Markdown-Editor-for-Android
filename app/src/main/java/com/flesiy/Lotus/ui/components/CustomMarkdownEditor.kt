@@ -239,13 +239,9 @@ fun CustomMarkdownEditor(
         },
         update = { editText ->
             if (value != editText.text.toString()) {
-                val oldSelectionStart = editText.selectionStart
-                val oldSelectionEnd = editText.selectionEnd
-                editText.setText(value)
-                editText.setSelection(
-                    oldSelectionStart.coerceIn(0, value.length),
-                    oldSelectionEnd.coerceIn(0, value.length)
-                )
+                val newText = SpannableStringBuilder(value)
+                editText.text = newText
+                editText.setSelection(value.length)
             }
         }
     )

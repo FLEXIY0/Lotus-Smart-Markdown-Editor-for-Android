@@ -7,12 +7,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,23 +31,33 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimePickerLayoutType
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -63,7 +73,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -74,12 +83,12 @@ import com.flesiy.Lotus.viewmodel.Note
 import com.flesiy.Lotus.viewmodel.NoteVersion
 import java.io.File
 import java.text.SimpleDateFormat
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
-import android.view.inputmethod.InputMethodManager
-import android.content.Context
-import androidx.compose.foundation.layout.size
 
 private const val TAG = "NoteEditor"
 
@@ -109,6 +118,160 @@ private fun Modifier.drawScrollbar(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TimeMarkDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (timestamp: LocalDateTime, description: String) -> Unit
+) {
+    var description by remember { mutableStateOf("") }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    
+    val currentDateTime = remember { LocalDateTime.now() }
+    var selectedDateTime by remember { mutableStateOf(currentDateTime) }
+    
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("dd.MM.yyyy") }
+    val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Добавить временную метку") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Выбор даты и времени метки
+                Column {
+                    Text(
+                        text = "Дата и время метки",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedButton(
+                            onClick = { showDatePicker = true }
+                        ) {
+                            Text(selectedDateTime.format(dateFormatter))
+                        }
+                        OutlinedButton(
+                            onClick = { showTimePicker = true }
+                        ) {
+                            Text(selectedDateTime.format(timeFormatter))
+                        }
+                    }
+                }
+
+                // Описание
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Описание (необязательно)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(selectedDateTime, description)
+                    onDismiss()
+                }
+            ) {
+                Text("Добавить")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Отмена")
+            }
+        }
+    )
+
+    // Диалоги выбора даты и времени
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = selectedDateTime
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val newDate = LocalDateTime.ofInstant(
+                                java.time.Instant.ofEpochMilli(millis),
+                                ZoneId.systemDefault()
+                            )
+                            selectedDateTime = selectedDateTime
+                                .withYear(newDate.year)
+                                .withMonth(newDate.monthValue)
+                                .withDayOfMonth(newDate.dayOfMonth)
+                        }
+                        showDatePicker = false
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Отмена")
+                }
+            }
+        ) {
+            DatePicker(
+                state = datePickerState,
+                showModeToggle = false
+            )
+        }
+    }
+
+    if (showTimePicker) {
+        val timePickerState = rememberTimePickerState(
+            initialHour = selectedDateTime.hour,
+            initialMinute = selectedDateTime.minute,
+            is24Hour = true
+        )
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            title = { Text("Выберите время") },
+            text = {
+                TimePicker(
+                    state = timePickerState,
+                    layoutType = TimePickerLayoutType.Vertical
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        selectedDateTime = selectedDateTime
+                            .withHour(timePickerState.hour)
+                            .withMinute(timePickerState.minute)
+                        showTimePicker = false
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) {
+                    Text("Отмена")
+                }
+            }
+        )
+    }
+}
+
 @Composable
 fun NoteEditor(
     note: Note,
@@ -127,18 +290,17 @@ fun NoteEditor(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var content by remember { mutableStateOf(note.content) }
     var editorRef by remember { mutableStateOf<EditText?>(null) }
-    var isPreviewMode by remember(note.id) { mutableStateOf(note.content.isNotEmpty()) }
+    var isPreviewMode by remember(note.id) { mutableStateOf(note.isPreviewMode) }
     val scrollState = rememberScrollState()
     var showMediaDialog by remember { mutableStateOf(false) }
+    var showTimeMarkDialog by remember { mutableStateOf(false) }
     
     // Отслеживаем изменения в контенте
     var hasUnsavedChanges by remember { mutableStateOf(false) }
     
     // Сброс флага при смене заметки
     LaunchedEffect(note.id) {
-        content = note.content
         isPreviewMode = note.isPreviewMode
         hasUnsavedChanges = false
     }
@@ -148,13 +310,13 @@ fun NoteEditor(
         if (isPreviewMode && selectedVersion != null && isVersionHistoryVisible) {
             // Проверяем, что версия принадлежит текущей заметке
             if (selectedVersion.noteId == note.id) {
-                content = selectedVersion.content
+                onContentChange(selectedVersion.content)
             } else {
                 // Если версия от другой заметки, сбрасываем выбор
                 onVersionSelected(null)
             }
         } else if (!isVersionHistoryVisible) {
-            content = note.content
+            onContentChange(note.content)
         }
     }
 
@@ -195,13 +357,12 @@ fun NoteEditor(
 
             // Вставляем markdown-ссылку на изображение в текст
             val imageMarkdown = "![](${imageUri})"
-            val currentText = content
+            val currentText = note.content
             val cursorPosition = editorRef?.selectionStart ?: currentText.length
             val newText = currentText.substring(0, cursorPosition) + 
                          imageMarkdown + 
                          currentText.substring(cursorPosition)
             
-            content = newText
             onContentChange(newText)
         }
     }
@@ -238,7 +399,7 @@ fun NoteEditor(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "${content.split(Regex("\\s+")).count()} слов",
+                                text = "${note.content.split(Regex("\\s+")).count()} слов",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontFamily = FontFamily.Default,
                                     fontWeight = FontWeight.Light
@@ -293,8 +454,8 @@ fun NoteEditor(
                     ) {
                         AnimatedVisibility(
                             visible = !isPreviewMode,
-                            enter = fadeIn() + slideInHorizontally(),
-                            exit = fadeOut() + slideOutHorizontally()
+                            enter = fadeIn(),
+                            exit = fadeOut()
                         ) {
                             IconButton(
                                 onClick = onStartRecording,
@@ -342,13 +503,35 @@ fun NoteEditor(
                             }
                         )
 
-                        IconButton(onClick = { showMediaDialog = true }) {
-                            Icon(
-                                imageVector = Icons.Outlined.AttachFile,
-                                contentDescription = "Добавить файл",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.rotate(45f)
-                            )
+                        AnimatedVisibility(
+                            visible = !isPreviewMode,
+                            enter = fadeIn(),
+                            exit = fadeOut()
+                        ) {
+                            IconButton(onClick = { showMediaDialog = true }) {
+                                Icon(
+                                    imageVector = Icons.Outlined.AttachFile,
+                                    contentDescription = "Добавить файл",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.rotate(45f)
+                                )
+                            }
+                        }
+
+                        AnimatedVisibility(
+                            visible = !isPreviewMode,
+                            enter = fadeIn(),
+                            exit = fadeOut()
+                        ) {
+                            IconButton(
+                                onClick = { showTimeMarkDialog = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = "Добавить временную метку",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
 
@@ -414,13 +597,12 @@ fun NoteEditor(
                     }
             ) {
                 AnimatedMarkdownContent(
-                    content = content,
+                    content = note.content,
                     onContentChange = { newContent ->
                         if (newContent != note.content) {
                             hasUnsavedChanges = true
+                            onContentChange(newContent)
                         }
-                        content = newContent
-                        onContentChange(newContent)
                     },
                     isPreviewMode = isPreviewMode,
                     modifier = Modifier.fillMaxWidth(),
@@ -460,6 +642,35 @@ fun NoteEditor(
                 TextButton(onClick = { showMediaDialog = false }) {
                     Text("Отмена")
                 }
+            }
+        )
+    }
+
+    if (showTimeMarkDialog) {
+        TimeMarkDialog(
+            onDismiss = { showTimeMarkDialog = false },
+            onConfirm = { timestamp, description ->
+                val timeMarkText = buildString {
+                    // Форматируем дату
+                    append("*")
+                    append(timestamp.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")))
+                    append("*")
+                    
+                    // Добавляем описание, если оно есть
+                    if (description.isNotEmpty()) {
+                        append("   ***")
+                        append(description)
+                        append("***")
+                    }
+                }
+                
+                val currentText = note.content
+                val cursorPosition = editorRef?.selectionStart ?: currentText.length
+                val newText = currentText.substring(0, cursorPosition) + 
+                             timeMarkText + 
+                             currentText.substring(cursorPosition)
+                
+                onContentChange(newText)
             }
         )
     }
