@@ -132,6 +132,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         startMemoryMonitoring()
         initExportDirectory()
         updateCacheStats()
+        loadNoteVersions()
         speechRecognitionManager = SpeechRecognitionManager(getApplication())
         loadTodoEnabled()
     }
@@ -294,6 +295,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 .sortedByDescending { it.createdAt }
                 .take(50)
 
+            // Сохраняем версии на диск
+            saveNoteVersions()
+
             FileUtils.saveNote(getApplication(), note.id, note.content)
             FileUtils.saveNotePreviewMode(getApplication(), note.id, note.isPreviewMode)
             Log.d(TAG, "✅ Заметка сохранена в файл")
@@ -366,12 +370,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             val note = _notes.value.find { it.id == noteId }
             if (note != null) {
+                // Удаляем все версии заметки
+                val updatedVersions = _noteVersions.value.filter { it.noteId != noteId }
+                _noteVersions.value = updatedVersions
+                saveNoteVersions()
+
                 trashManager.moveToTrash(noteId, note.content)
-                trashManager.deleteImagesForNote(noteId) // Удаляем изображения
+                trashManager.deleteImagesForNote(noteId)
                 FileUtils.deleteNote(getApplication(), noteId)
                 FileUtils.deleteNotePreviewMode(getApplication(), noteId)
                 
-                // Если удаляем текущую заметку, загружаем другую
                 if (currentNote.value.id == noteId) {
                     val files = FileUtils.getNoteFiles(getApplication())
                     val nextNote = files.firstOrNull()
@@ -706,6 +714,77 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 
                 _noteVersions.value = currentVersions
+                // Сохраняем изменения на диск
+                saveNoteVersions()
+            }
+        }
+    }
+
+    private fun loadNoteVersions() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val versionsDir = File(getApplication<Application>().filesDir, "versions")
+                if (!versionsDir.exists()) {
+                    versionsDir.mkdirs()
+                    return@launch
+                }
+
+                val versions = mutableListOf<NoteVersion>()
+                versionsDir.listFiles()?.forEach { file ->
+                    try {
+                        val content = file.readText()
+                        val lines = content.lines()
+                        if (lines.size >= 4) {
+                            val id = lines[0].toLong()
+                            val noteId = lines[1].toLong()
+                            val title = lines[2]
+                            val createdAt = lines[3].toLong()
+                            val versionContent = lines.drop(4).joinToString("\n")
+                            
+                            versions.add(NoteVersion(
+                                id = id,
+                                noteId = noteId,
+                                content = versionContent,
+                                title = title,
+                                createdAt = createdAt
+                            ))
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Ошибка при загрузке версии: ${file.name}", e)
+                    }
+                }
+                _noteVersions.value = versions.sortedByDescending { it.createdAt }
+            } catch (e: Exception) {
+                Log.e(TAG, "Ошибка при загрузке версий", e)
+            }
+        }
+    }
+
+    private fun saveNoteVersions() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val versionsDir = File(getApplication<Application>().filesDir, "versions")
+                if (!versionsDir.exists()) {
+                    versionsDir.mkdirs()
+                }
+
+                // Очищаем директорию
+                versionsDir.listFiles()?.forEach { it.delete() }
+
+                // Сохраняем каждую версию в отдельный файл
+                _noteVersions.value.forEach { version ->
+                    val file = File(versionsDir, "${version.id}.txt")
+                    val content = buildString {
+                        appendLine(version.id)
+                        appendLine(version.noteId)
+                        appendLine(version.title)
+                        appendLine(version.createdAt)
+                        append(version.content)
+                    }
+                    file.writeText(content)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Ошибка при сохранении версий", e)
             }
         }
     }
