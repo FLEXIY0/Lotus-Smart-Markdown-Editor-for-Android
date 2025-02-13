@@ -535,6 +535,75 @@ fun NoteEditor(
                                 )
                             }
                         }
+
+                        AnimatedVisibility(
+                            visible = !isPreviewMode,
+                            enter = fadeIn(),
+                            exit = fadeOut()
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    Log.d(TAG, "🔲 Нажата кнопка добавления чекбокса")
+                                    editorRef?.let { editor ->
+                                        try {
+                                            val currentText = note.content
+                                            Log.d(TAG, "📝 Текущий текст: '$currentText'")
+                                            
+                                            val cursorPosition = editor.selectionStart
+                                            Log.d(TAG, "📍 Исходная позиция курсора: $cursorPosition")
+                                            
+                                            val safePosition = cursorPosition.coerceIn(0, currentText.length)
+                                            Log.d(TAG, "✔️ Безопасная позиция курсора: $safePosition")
+                                            
+                                            val checkboxText = "- [ ] "
+                                            
+                                            // Определяем, нужно ли добавить перенос строки перед чекбоксом
+                                            val needsNewLine = safePosition > 0 && 
+                                                             !currentText.substring(0, safePosition).endsWith("\n")
+                                            Log.d(TAG, "↩️ Нужен перенос строки: $needsNewLine")
+                                            
+                                            val newText = buildString {
+                                                append(currentText.substring(0, safePosition))
+                                                if (needsNewLine) {
+                                                    append("\n")
+                                                    Log.d(TAG, "➕ Добавлен перенос строки")
+                                                }
+                                                append(checkboxText)
+                                                append(currentText.substring(safePosition))
+                                            }
+                                            
+                                            Log.d(TAG, "📄 Новый текст: '$newText'")
+                                            onContentChange(newText)
+                                            
+                                            // Устанавливаем курсор после чекбокса с учетом возможного переноса строки
+                                            val newCursorPosition = safePosition + checkboxText.length + (if (needsNewLine) 1 else 0)
+                                            Log.d(TAG, "📍 Новая позиция курсора: $newCursorPosition")
+                                            
+                                            editor.post {
+                                                try {
+                                                    // Проверяем длину текста перед установкой курсора
+                                                    val finalPosition = newCursorPosition.coerceIn(0, editor.length())
+                                                    editor.setSelection(finalPosition)
+                                                    Log.d(TAG, "✅ Курсор успешно установлен в позицию $finalPosition")
+                                                } catch (e: Exception) {
+                                                    Log.e(TAG, "❌ Ошибка при установке курсора: ${e.message}")
+                                                }
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e(TAG, "❌ Ошибка при добавлении чекбокса: ${e.message}")
+                                        }
+                                    } ?: run {
+                                        Log.e(TAG, "❌ editorRef is null")
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.check_box_24px),
+                                    contentDescription = "Добавить чекбокс",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                     }
 
                     Button(
@@ -551,17 +620,8 @@ fun NoteEditor(
                                 MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Save,
-                            contentDescription = "Сохранить",
-                            tint = if (hasUnsavedChanges)
-                                MaterialTheme.colorScheme.onPrimary
-                            else
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (hasUnsavedChanges) "Сохранить*" else "Сохранить",
+                            text = if (hasUnsavedChanges) "Сохранить" else "Сохранить",
                             color = if (hasUnsavedChanges)
                                 MaterialTheme.colorScheme.onPrimary
                             else
