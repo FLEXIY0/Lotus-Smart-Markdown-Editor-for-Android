@@ -303,7 +303,7 @@ fun LotusApp(
                             .fillMaxWidth()
                             .padding(vertical = 8.dp)
                     ) {
-                        Divider()
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
                         
                         // Пункт импорта/экспорта
                         if (viewModel.isFileManagementEnabled.collectAsState().value) {
@@ -396,7 +396,7 @@ fun LotusApp(
                             )
                         }
                         
-                        Divider()
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
                         
                         // Кнопка корзины
                         ListItem(
@@ -430,7 +430,7 @@ fun LotusApp(
                             }
                         )
                         
-                        Divider()
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
                         
                         // Информация о ресурсах
                         ListItem(

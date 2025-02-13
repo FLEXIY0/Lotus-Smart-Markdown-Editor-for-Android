@@ -2,6 +2,7 @@ package com.flesiy.Lotus.ui.components
 
 import android.content.Context
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -45,6 +46,7 @@ fun DeveloperRoom(
     var systemPrompt by remember { mutableStateOf(DEFAULT_SYSTEM_PROMPT) }
     var showPromptEditor by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
+    var showHelpGuide by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -344,6 +346,23 @@ fun DeveloperRoom(
                     }
                 }
             }
+
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { showHelpGuide = true }
+            ) {
+                ListItem(
+                    headlineContent = { Text("Справка") },
+                    supportingContent = { Text("Подробное описание всех функций приложения") },
+                    leadingContent = {
+                        Icon(
+                            Icons.Default.Help,
+                            contentDescription = "Справка",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                )
+            }
         }
     }
 
@@ -408,6 +427,12 @@ fun DeveloperRoom(
                     Text("Отмена")
                 }
             }
+        )
+    }
+
+    if (showHelpGuide) {
+        HelpGuideDialog(
+            onDismiss = { showHelpGuide = false }
         )
     }
 }
