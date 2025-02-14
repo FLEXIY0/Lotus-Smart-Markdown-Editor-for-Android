@@ -357,18 +357,22 @@ fun LotusApp(
                                             AssistChip(
                                                 onClick = { 
                                                     lastViewedFile?.let { file ->
-                                                        val intent = Intent(Intent.ACTION_SEND)
-                                                        intent.type = "text/plain"
-                                                        intent.putExtra(
-                                                            Intent.EXTRA_STREAM,
-                                                            FileProvider.getUriForFile(
-                                                                context,
-                                                                "${context.packageName}.provider",
-                                                                file
+                                                        val noteId = file.nameWithoutExtension.toLong()
+                                                        val shareFile = viewModel.prepareNoteForSharing(noteId)
+                                                        if (shareFile != null) {
+                                                            val intent = Intent(Intent.ACTION_SEND)
+                                                            intent.type = "text/markdown"
+                                                            intent.putExtra(
+                                                                Intent.EXTRA_STREAM,
+                                                                FileProvider.getUriForFile(
+                                                                    context,
+                                                                    "${context.packageName}.provider",
+                                                                    shareFile
+                                                                )
                                                             )
-                                                        )
-                                                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                        context.startActivity(Intent.createChooser(intent, "Отправить заметку"))
+                                                            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                            context.startActivity(Intent.createChooser(intent, "Отправить заметку"))
+                                                        }
                                                     }
                                                 },
                                                 label = { Text("Отправка") },
@@ -600,7 +604,8 @@ fun LotusApp(
                         },
                         modifier = Modifier.padding(padding),
                         fontSize = fontSize,
-                        versions = versions
+                        versions = versions,
+                        viewModel = viewModel
                     )
                 }
             }

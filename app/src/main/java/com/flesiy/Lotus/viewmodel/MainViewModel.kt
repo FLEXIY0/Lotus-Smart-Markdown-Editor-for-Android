@@ -139,6 +139,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         speechRecognitionManager = SpeechRecognitionManager(getApplication())
         loadTodoEnabled()
         loadFontSize()
+        loadFileManagementEnabled()
     }
 
     fun setActivity(activity: Activity) {
@@ -188,6 +189,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 kotlinx.coroutines.delay(5000) // Обновляем каждые 5 секунд
             }
         }
+    }
+
+    fun prepareNoteForSharing(noteId: Long): File? {
+        val context = getApplication<Application>()
+        val content = FileUtils.readNoteContent(context, noteId)
+        if (content.isEmpty()) return null
+
+        // Получаем заголовок из первой строки
+        val title = content.lines().firstOrNull()?.trim()?.removePrefix("#")?.trim() ?: "Заметка"
+        
+        // Форматируем имя файла (удаляем спецсимволы и пробелы заменяем на подчеркивания)
+        val fileName = title
+            .replace(Regex("[\\\\/:*?\"<>|]"), "") // Удаляем запрещенные символы
+            .replace(Regex("\\s+"), "_") // Заменяем пробелы на подчеркивания
+            .take(50) // Ограничиваем длину
+            .trim('_') // Убираем подчеркивания в начале и конце
+            .plus(".md")
+
+        // Создаем временный файл в кэше
+        val tempFile = File(context.cacheDir, fileName)
+        tempFile.writeText(content)
+        return tempFile
     }
 
     private fun loadLastViewedNote() {
@@ -654,7 +677,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setFileManagementEnabled(enabled: Boolean) {
-        _isFileManagementEnabled.value = enabled
+        viewModelScope.launch {
+            userPreferences.setFileManagementEnabled(enabled)
+            _isFileManagementEnabled.value = enabled
+        }
+    }
+
+    private fun loadFileManagementEnabled() {
+        viewModelScope.launch {
+            userPreferences.fileManagementEnabled.collect { enabled ->
+                _isFileManagementEnabled.value = enabled
+            }
+        }
     }
 
     fun setTodoEnabled(enabled: Boolean) {
@@ -849,5 +883,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (!isVisible) {
             _selectedVersion.value = null
         }
+    }
+
+    fun readNoteContent(file: File): String {
+        return FileUtils.readNoteContent(getApplication(), file.nameWithoutExtension.toLong())
     }
 } 

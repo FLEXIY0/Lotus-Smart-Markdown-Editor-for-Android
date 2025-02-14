@@ -1,5 +1,6 @@
 package com.flesiy.Lotus.ui.components
 
+import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import android.widget.EditText
@@ -11,8 +12,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,22 +20,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -51,7 +46,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -67,7 +61,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -95,6 +88,8 @@ import java.util.Locale
 import java.util.UUID
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.collectAsState
+import com.flesiy.Lotus.utils.FileUtils
+import com.flesiy.Lotus.viewmodel.MainViewModel
 
 private const val TAG = "NoteEditor"
 
@@ -295,7 +290,8 @@ fun NoteEditor(
     onDeleteVersion: (NoteVersion) -> Unit = {},
     modifier: Modifier = Modifier,
     fontSize: Float = 16f,
-    versions: List<NoteVersion> = emptyList()
+    versions: List<NoteVersion> = emptyList(),
+    viewModel: MainViewModel
 ) {
     val context = LocalContext.current
     var editorRef by remember { mutableStateOf<EditText?>(null) }
@@ -458,7 +454,8 @@ fun NoteEditor(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .height(56.dp)
+                        .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -466,11 +463,7 @@ fun NoteEditor(
                         horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        AnimatedVisibility(
-                            visible = !isPreviewMode,
-                            enter = fadeIn(),
-                            exit = fadeOut()
-                        ) {
+                        if (!isPreviewMode) {
                             IconButton(
                                 onClick = onStartRecording,
                                 enabled = !isPreviewMode
@@ -517,11 +510,7 @@ fun NoteEditor(
                             }
                         )
 
-                        AnimatedVisibility(
-                            visible = !isPreviewMode,
-                            enter = fadeIn(),
-                            exit = fadeOut()
-                        ) {
+                        if (!isPreviewMode) {
                             IconButton(onClick = { showMediaDialog = true }) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.attach_file_add_24px),
@@ -531,11 +520,7 @@ fun NoteEditor(
                             }
                         }
 
-                        AnimatedVisibility(
-                            visible = !isPreviewMode,
-                            enter = fadeIn(),
-                            exit = fadeOut()
-                        ) {
+                        if (!isPreviewMode) {
                             IconButton(
                                 onClick = { showTimeMarkDialog = true }
                             ) {
@@ -547,11 +532,7 @@ fun NoteEditor(
                             }
                         }
 
-                        AnimatedVisibility(
-                            visible = !isPreviewMode,
-                            enter = fadeIn(),
-                            exit = fadeOut()
-                        ) {
+                        if (!isPreviewMode) {
                             IconButton(
                                 onClick = {
                                     Log.d(TAG, "🔲 Нажата кнопка добавления чекбокса")
@@ -616,17 +597,43 @@ fun NoteEditor(
                             }
                         }
 
-                        AnimatedVisibility(
-                            visible = isPreviewMode,
-                            enter = fadeIn(),
-                            exit = fadeOut()
-                        ) {
+                        if (isPreviewMode) {
                             IconButton(
                                 onClick = { showNotificationsPanel = true }
                             ) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_notification),
                                     contentDescription = "Уведомления",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        if (isPreviewMode) {
+                            val context = LocalContext.current
+                            IconButton(
+                                onClick = {
+                                    val noteId = note.id
+                                    val shareFile = viewModel.prepareNoteForSharing(noteId)
+                                    if (shareFile != null) {
+                                        val intent = Intent(Intent.ACTION_SEND)
+                                        intent.type = "text/markdown"
+                                        intent.putExtra(
+                                            Intent.EXTRA_STREAM,
+                                            FileProvider.getUriForFile(
+                                                context,
+                                                "${context.packageName}.provider",
+                                                shareFile
+                                            )
+                                        )
+                                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        context.startActivity(Intent.createChooser(intent, "Отправить заметку"))
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.share_24px),
+                                    contentDescription = "Поделиться",
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }

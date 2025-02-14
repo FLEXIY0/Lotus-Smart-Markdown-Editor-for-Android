@@ -16,6 +16,7 @@ class UserPreferences(private val context: Context) {
     private val TODO_ENABLED = booleanPreferencesKey("todo_enabled")
     private val NOTE_DELETION_TIME_PREFIX = "note_deletion_time_"
     private val FONT_SIZE = floatPreferencesKey("font_size")
+    private val FILE_MANAGEMENT_ENABLED = booleanPreferencesKey("file_management_enabled")
 
     val skipDeleteConfirmation: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
@@ -73,6 +74,17 @@ class UserPreferences(private val context: Context) {
     suspend fun setTodoEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[TODO_ENABLED] = enabled
+        }
+    }
+
+    val fileManagementEnabled: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[FILE_MANAGEMENT_ENABLED] ?: false
+        }
+
+    suspend fun setFileManagementEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[FILE_MANAGEMENT_ENABLED] = enabled
         }
     }
 

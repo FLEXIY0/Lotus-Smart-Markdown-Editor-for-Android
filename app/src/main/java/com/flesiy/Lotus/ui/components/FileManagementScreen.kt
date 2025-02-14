@@ -204,18 +204,24 @@ fun FileManagementScreen(
                             IconButton(onClick = {
                                 val currentLastViewedFile = lastViewedFile
                                 currentLastViewedFile?.let { file ->
-                                    val uri = FileProvider.getUriForFile(
-                                        context,
-                                        "${context.packageName}.provider",
-                                        file
-                                    )
-                                    val shareIntent = Intent().apply {
-                                        action = Intent.ACTION_SEND
-                                        putExtra(Intent.EXTRA_STREAM, uri)
-                                        type = "text/markdown"
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    val noteId = file.nameWithoutExtension.toLong()
+                                    val shareFile = viewModel.prepareNoteForSharing(noteId)
+                                    if (shareFile != null) {
+                                        val shareIntent = Intent().apply {
+                                            action = Intent.ACTION_SEND
+                                            putExtra(
+                                                Intent.EXTRA_STREAM,
+                                                FileProvider.getUriForFile(
+                                                    context,
+                                                    "${context.packageName}.provider",
+                                                    shareFile
+                                                )
+                                            )
+                                            type = "text/markdown"
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(Intent.createChooser(shareIntent, "Отправить заметку"))
                                     }
-                                    context.startActivity(Intent.createChooser(shareIntent, "Отправить заметку"))
                                 }
                             }) {
                                 Icon(
@@ -229,9 +235,20 @@ fun FileManagementScreen(
                         
                         val currentLastViewedFile = lastViewedFile
                         if (currentLastViewedFile != null) {
+                            val noteContent = viewModel.readNoteContent(currentLastViewedFile)
+                            val title = noteContent.lines().firstOrNull()?.trim()?.removePrefix("#")?.trim() ?: "Без названия"
+                            val preview = noteContent.lines().drop(1).joinToString("\n").take(100)
+                            
                             ListItem(
-                                headlineContent = { Text(currentLastViewedFile.name) },
-                                supportingContent = { Text("Последняя просмотренная заметка") },
+                                headlineContent = { Text(title) },
+                                supportingContent = { 
+                                    if (preview.isNotEmpty()) {
+                                        Text(
+                                            text = preview + if (preview.length >= 100) "..." else "",
+                                            maxLines = 2
+                                        )
+                                    }
+                                },
                                 leadingContent = {
                                     Icon(
                                         Icons.Default.Description,

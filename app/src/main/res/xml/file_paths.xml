@@ -2,6 +2,7 @@
 <paths>
     <files-path name="notes" path="notes/"/>
     <cache-path name="images" path="images/"/>
+    <cache-path name="shared" path="."/>
     <external-files-path name="external_files" path="."/>
     <external-path name="external" path="."/>
 </paths> 
