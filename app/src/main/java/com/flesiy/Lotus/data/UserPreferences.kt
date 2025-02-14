@@ -18,6 +18,7 @@ class UserPreferences(private val context: Context) {
     private val FONT_SIZE = floatPreferencesKey("font_size")
     private val FILE_MANAGEMENT_ENABLED = booleanPreferencesKey("file_management_enabled")
     private val EXPORT_DIRECTORY = stringPreferencesKey("export_directory")
+    private val EXPORT_ONLY_NEW = booleanPreferencesKey("export_only_new")
 
     val skipDeleteConfirmation: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
@@ -112,6 +113,17 @@ class UserPreferences(private val context: Context) {
             } else {
                 preferences.remove(EXPORT_DIRECTORY)
             }
+        }
+    }
+
+    val exportOnlyNew: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[EXPORT_ONLY_NEW] ?: false
+        }
+
+    suspend fun setExportOnlyNew(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[EXPORT_ONLY_NEW] = enabled
         }
     }
 } 

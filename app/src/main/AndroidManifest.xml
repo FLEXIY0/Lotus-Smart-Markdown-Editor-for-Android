@@ -38,6 +38,31 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="text/plain" />
+                <data android:mimeType="text/markdown" />
+                <data android:mimeType="text/x-markdown" />
+                <data android:mimeType="application/x-latex" />
+                <data android:mimeType="text/x-rst" />
+                <data android:mimeType="text/x-org" />
+                <data android:mimeType="text/x-asciidoc" />
+                <data android:pathPattern=".*\\.txt" />
+                <data android:pathPattern=".*\\.md" />
+                <data android:pathPattern=".*\\.markdown" />
+                <data android:pathPattern=".*\\.mkd" />
+                <data android:pathPattern=".*\\.mdown" />
+                <data android:pathPattern=".*\\.rst" />
+                <data android:pathPattern=".*\\.org" />
+                <data android:pathPattern=".*\\.adoc" />
+                <data android:pathPattern=".*\\.asc" />
+                <data android:pathPattern=".*\\.tex" />
+                <data android:pathPattern=".*\\.latex" />
+            </intent-filter>
         </activity>
 
         <receiver

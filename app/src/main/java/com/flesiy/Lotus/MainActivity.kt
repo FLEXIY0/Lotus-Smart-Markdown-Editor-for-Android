@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -154,12 +155,50 @@ class MainActivity : ComponentActivity() {
                     val viewModel: MainViewModel = viewModel()
                     viewModelInstance = viewModel
                     viewModel.setActivity(this)
+
+                    // Обработка входящего интента
+                    LaunchedEffect(intent) {
+                        handleIncomingIntent(intent, viewModel)
+                    }
+
                     LotusApp(
                         viewModel = viewModel,
                         onNavControllerCreated = { navController ->
                             currentNavController = navController
                         }
                     )
+                }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
+
+    private fun handleIncomingIntent(intent: Intent, viewModel: MainViewModel) {
+        if (intent.action == Intent.ACTION_VIEW) {
+            intent.data?.let { uri ->
+                try {
+                    contentResolver.openInputStream(uri)?.use { inputStream ->
+                        val content = inputStream.bufferedReader().readText()
+                        viewModel.createNewNoteWithContent(content)
+                        // Переходим к редактору
+                        currentNavController?.navigate("editor") {
+                            popUpTo(currentNavController!!.graph.findStartDestination().id) {
+                                inclusive = true
+                            }
+                            launchSingleTop = true
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Ошибка при открытии файла", e)
+                    Toast.makeText(
+                        this,
+                        "Не удалось открыть файл: ${e.localizedMessage}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         }

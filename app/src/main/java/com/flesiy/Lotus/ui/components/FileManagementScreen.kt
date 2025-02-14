@@ -36,6 +36,7 @@ fun FileManagementScreen(
     val context = LocalContext.current
     val exportDirectory by viewModel.exportDirectory.collectAsState(initial = null as File?)
     val lastViewedFile by viewModel.lastViewedNoteFile.collectAsState(initial = null as File?)
+    val exportOnlyNew by viewModel.exportOnlyNew.collectAsState()
     var hasStoragePermission by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     var showExportDialog by remember { mutableStateOf(false) }
@@ -347,7 +348,10 @@ fun FileManagementScreen(
         // Диалог экспорта
         if (showExportDialog) {
             AlertDialog(
-                onDismissRequest = { showExportDialog = false },
+                onDismissRequest = { 
+                    showExportDialog = false 
+                    viewModel.resetExportProgress()
+                },
                 icon = { Icon(Icons.Default.Upload, contentDescription = null) },
                 title = { Text("Экспорт заметок") },
                 text = { 
@@ -364,6 +368,29 @@ fun FileManagementScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )
+
+                        // Добавляем переключатель для экспорта только новых заметок
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    "Экспортировать только новые",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    "Экспорт только заметок, измененных после последнего экспорта",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = exportOnlyNew,
+                                onCheckedChange = { viewModel.setExportOnlyNew(it) }
+                            )
+                        }
 
                         when (val progress = exportProgress) {
                             is MainViewModel.ExportProgress.InProgress -> {
@@ -404,7 +431,10 @@ fun FileManagementScreen(
                 },
                 dismissButton = {
                     TextButton(
-                        onClick = { showExportDialog = false },
+                        onClick = { 
+                            showExportDialog = false
+                            viewModel.resetExportProgress()
+                        },
                         enabled = exportProgress !is MainViewModel.ExportProgress.InProgress
                     ) {
                         Text("Отмена")
@@ -417,11 +447,13 @@ fun FileManagementScreen(
         LaunchedEffect(exportProgress) {
             when (exportProgress) {
                 is MainViewModel.ExportProgress.Success -> {
-                    showExportDialog = false
-                    snackbarHostState.showSnackbar(
-                        message = "Экспорт успешно завершен",
-                        duration = SnackbarDuration.Short
-                    )
+                    if (showExportDialog) {  // Проверяем, что диалог открыт
+                        showExportDialog = false
+                        snackbarHostState.showSnackbar(
+                            message = "Экспорт успешно завершен",
+                            duration = SnackbarDuration.Short
+                        )
+                    }
                 }
                 is MainViewModel.ExportProgress.Error -> {
                     snackbarHostState.showSnackbar(
