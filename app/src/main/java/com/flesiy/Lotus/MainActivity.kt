@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.RemoveCircle
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -89,6 +90,7 @@ import com.flesiy.Lotus.ui.components.FileManagementScreen
 import com.flesiy.Lotus.ui.components.FontSizeDialog
 import com.flesiy.Lotus.ui.components.NoteEditor
 import com.flesiy.Lotus.ui.components.NotesList
+import com.flesiy.Lotus.ui.components.SearchDialog
 import com.flesiy.Lotus.ui.components.TrashScreen
 import com.flesiy.Lotus.ui.theme.LotusTheme
 import com.flesiy.Lotus.viewmodel.MainViewModel
@@ -186,6 +188,7 @@ fun LotusApp(
 ) {
     val navController = rememberNavController()
     var showFontSizeDialog by remember { mutableStateOf(false) }
+    var showSearchDialog by remember { mutableStateOf(false) }
     val fontSize by viewModel.fontSize.collectAsState()
     
     // Функция для безопасной навигации с анимацией
@@ -512,6 +515,9 @@ fun LotusApp(
                                 IconButton(onClick = { showFontSizeDialog = true }) {
                                     Icon(Icons.Default.FormatSize, contentDescription = "Размер шрифта")
                                 }
+                                IconButton(onClick = { showSearchDialog = true }) {
+                                    Icon(Icons.Default.Search, contentDescription = "Поиск")
+                                }
                                 if (currentNote.isPreviewMode) {
                                     IconButton(
                                         onClick = { viewModel.toggleVersionHistory() },
@@ -738,6 +744,22 @@ fun LotusApp(
                 )
             }
         }
+    }
+
+    if (showSearchDialog) {
+        SearchDialog(
+            onDismiss = { showSearchDialog = false },
+            onNoteSelected = { noteId ->
+                viewModel.loadNote(noteId)
+                navigateSafely("editor")
+            },
+            notes = notes.map { note -> 
+                com.flesiy.Lotus.ui.components.SearchNote(
+                    id = note.id,
+                    content = note.content
+                )
+            }
+        )
     }
 
     if (showFontSizeDialog) {
