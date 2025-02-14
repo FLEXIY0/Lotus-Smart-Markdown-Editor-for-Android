@@ -306,10 +306,11 @@ fun LotusApp(
                             .fillMaxWidth()
                             .padding(vertical = 8.dp)
                     ) {
-                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+                       
                         
                         // Пункт импорта/экспорта
                         if (viewModel.isFileManagementEnabled.collectAsState().value) {
+                            Divider(modifier = Modifier.padding(vertical = 8.dp))
                             ListItem(
                                 headlineContent = { Text("Загрузка и отправка") },
                                 supportingContent = {
