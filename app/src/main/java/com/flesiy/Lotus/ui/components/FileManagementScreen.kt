@@ -320,8 +320,13 @@ fun FileManagementScreen(
                                 exportDirectory?.let { dir ->
                                     try {
                                         val intent = Intent(Intent.ACTION_VIEW)
-                                        val uri = Uri.parse("content://com.android.externalstorage.documents/tree/primary%3A${dir.name}")
-                                        intent.setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                            val uri = Uri.parse("content://com.android.externalstorage.documents/document/primary:${dir.absolutePath.substringAfter("/storage/emulated/0/")}")
+                                            intent.setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
+                                        } else {
+                                            val uri = Uri.fromFile(dir)
+                                            intent.setDataAndType(uri, "resource/folder")
+                                        }
                                         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                         context.startActivity(intent)
                                     } catch (e: Exception) {

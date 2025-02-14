@@ -5,8 +5,10 @@ import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.DocumentsContract
 import android.provider.Settings
 import android.util.Log
 import android.view.inputmethod.InputMethodManager
@@ -370,17 +372,20 @@ fun LotusApp(
                                             AssistChip(
                                                 onClick = { 
                                                     exportDirectory?.let { dir ->
-                                                        val intent = Intent(Intent.ACTION_VIEW)
-                                                        intent.setDataAndType(
-                                                            FileProvider.getUriForFile(
-                                                                context,
-                                                                "${context.packageName}.provider",
-                                                                dir
-                                                            ),
-                                                            "*/*"
-                                                        )
-                                                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                        context.startActivity(intent)
+                                                        try {
+                                                            val intent = Intent(Intent.ACTION_VIEW)
+                                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                                                val uri = Uri.parse("content://com.android.externalstorage.documents/document/primary:${dir.absolutePath.substringAfter("/storage/emulated/0/")}")
+                                                                intent.setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
+                                                            } else {
+                                                                val uri = Uri.fromFile(dir)
+                                                                intent.setDataAndType(uri, "resource/folder")
+                                                            }
+                                                            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                            context.startActivity(intent)
+                                                        } catch (e: Exception) {
+                                                            Log.e("FileManagement", "Ошибка при открытии директории", e)
+                                                        }
                                                     }
                                                 },
                                                 label = { Text("Хранилище") },
@@ -453,7 +458,7 @@ fun LotusApp(
                                     Icons.Default.Delete,
                                     contentDescription = "Корзина",
                                     tint = if (isTrashOverLimit) MaterialTheme.colorScheme.error 
-                                          else MaterialTheme.colorScheme.onSurface
+                                          else MaterialTheme.colorScheme.primary
                                 )
                             },
                             trailingContent = if (trashSize > 0) {
@@ -513,7 +518,7 @@ fun LotusApp(
                                 Icon(
                                     Icons.Default.Memory,
                                     contentDescription = "Использование памяти",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             },
                             modifier = Modifier.clickable {
