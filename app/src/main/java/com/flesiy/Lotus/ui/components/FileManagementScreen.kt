@@ -3,6 +3,9 @@ package com.flesiy.Lotus.ui.components
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -16,10 +19,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.clickable
 import androidx.core.content.FileProvider
+import androidx.documentfile.provider.DocumentFile
 import com.flesiy.Lotus.viewmodel.MainViewModel
 import java.io.File
+import android.util.Log
+import android.provider.DocumentsContract
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,22 +37,27 @@ fun FileManagementScreen(
     val exportDirectory by viewModel.exportDirectory.collectAsState(initial = null as File?)
     val lastViewedFile by viewModel.lastViewedNoteFile.collectAsState(initial = null as File?)
     var hasStoragePermission by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var showDirectoryPicker by remember { mutableStateOf(false) }
+    val exportProgress by viewModel.exportProgress.collectAsState()
 
-    // Запрос разрешений для Android < 13
+    // Проверяем разрешения при запуске
+    LaunchedEffect(Unit) {
+        hasStoragePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == 
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    // Запрос разрешений для Android < 11
     val requestOldStoragePermission = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         hasStoragePermission = permissions.values.all { it }
-    }
-
-    // Запрос разрешений для Android 13+
-    val requestNewStoragePermission = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        hasStoragePermission = isGranted
     }
 
     // Выбор директории для экспорта
@@ -55,8 +65,56 @@ fun FileManagementScreen(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
         uri?.let {
-            val directory = File(uri.path!!)
-            viewModel.onExportDirectorySelect(directory)
+            // Получаем разрешение на доступ к выбранной директории
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+            
+            // Получаем DocumentFile для выбранной директории
+            val documentFile = DocumentFile.fromTreeUri(context, uri)
+            documentFile?.let { docFile ->
+                // Логируем информацию о выбранной директории
+                Log.d("FileManagement", "Выбрана директория: ${docFile.uri}")
+                Log.d("FileManagement", "Название директории: ${docFile.name}")
+                Log.d("FileManagement", "Тип: ${docFile.type}")
+                Log.d("FileManagement", "Может записывать: ${docFile.canWrite()}")
+                
+                try {
+                    // Преобразуем URI в путь к реальной директории
+                    val path = uri.path?.replace("/tree/primary:", "/storage/emulated/0/")
+                        ?.replace("/document/primary:", "/storage/emulated/0/")
+                    
+                    path?.let { realPath ->
+                        Log.d("FileManagement", "Преобразованный путь: $realPath")
+                        val exportDir = File(realPath)
+                        if (!exportDir.exists()) {
+                            val created = exportDir.mkdirs()
+                            Log.d("FileManagement", "Создание выбранной директории: $created")
+                        }
+                        Log.d("FileManagement", "Путь к директории экспорта: ${exportDir.absolutePath}")
+                        viewModel.setExportDirectory(exportDir)
+                    } ?: run {
+                        Log.e("FileManagement", "Не удалось преобразовать URI в путь")
+                        // Используем резервный вариант
+                        val backupDir = File(context.getExternalFilesDir(null), "Lotus")
+                        if (!backupDir.exists()) {
+                            backupDir.mkdirs()
+                        }
+                        Log.d("FileManagement", "Использование резервной директории: ${backupDir.absolutePath}")
+                        viewModel.setExportDirectory(backupDir)
+                    }
+                } catch (e: Exception) {
+                    Log.e("FileManagement", "Ошибка при создании директории", e)
+                    // Используем резервный вариант
+                    val backupDir = File(context.getExternalFilesDir(null), "Lotus")
+                    if (!backupDir.exists()) {
+                        backupDir.mkdirs()
+                    }
+                    Log.d("FileManagement", "Использование резервной директории: ${backupDir.absolutePath}")
+                    viewModel.setExportDirectory(backupDir)
+                }
+            }
         }
     }
 
@@ -64,286 +122,223 @@ fun FileManagementScreen(
     val pickFile = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
-        if (uri != null) {
-            // TODO: Реализовать импорт файла
+        uri?.let { selectedUri ->
+            context.contentResolver.openInputStream(selectedUri)?.use { inputStream ->
+                val content = inputStream.bufferedReader().readText()
+                // Создаем новую заметку с импортированным содержимым
+                viewModel.createNewNoteWithContent(content)
+            }
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Загрузка и отправка") },
+                title = { Text("Управление файлами") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, "Назад")
                     }
                 }
             )
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
         }
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = modifier
                 .fillMaxSize()
                 .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Секция разрешений
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .clickable {
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                                requestNewStoragePermission.launch(
-                                    Manifest.permission.MANAGE_EXTERNAL_STORAGE
-                                )
-                            } else {
-                                requestOldStoragePermission.launch(
-                                    arrayOf(
-                                        Manifest.permission.READ_EXTERNAL_STORAGE,
-                                        Manifest.permission.WRITE_EXTERNAL_STORAGE
-                                    )
-                                )
-                            }
-                        },
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
+            // Карточка с разрешениями
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                        context.startActivity(intent)
+                    } else {
+                        requestOldStoragePermission.launch(
+                            arrayOf(
+                                Manifest.permission.READ_EXTERNAL_STORAGE,
+                                Manifest.permission.WRITE_EXTERNAL_STORAGE
+                            )
+                        )
+                    }
+                }
+            ) {
+                ListItem(
+                    headlineContent = { Text("Разрешения") },
+                    supportingContent = {
+                        Text(
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+                                "Доступ ко всем файлам для импорта/экспорта"
+                            else
+                                "Доступ к внешнему хранилищу для импорта/экспорта"
+                        )
+                    },
+                    leadingContent = {
+                        Icon(
+                            if (hasStoragePermission) 
+                                Icons.Default.CheckCircle 
+                            else 
+                                Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = if (hasStoragePermission)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.error
+                        )
+                    }
+                )
+            }
+
+            // Основные действия
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                ElevatedCard(
+                    modifier = Modifier.weight(1f),
+                    onClick = { 
+                        Log.d("FileManagement", "Нажата кнопка экспорта")
+                        showExportDialog = true 
+                    },
+                    enabled = hasStoragePermission
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        Icon(
+                            Icons.Default.Upload,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
                         Text(
-                            text = "Разрешения",
+                            "Экспорт",
                             style = MaterialTheme.typography.titleMedium
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        PermissionItem(
-                            title = "Хранилище",
-                            description = "Доступ к внешнему хранилищу для импорта/экспорта",
-                            isGranted = hasStoragePermission
+                        Text(
+                            "Сохранить все заметки",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-            }
 
-            // Секция действий
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
+                ElevatedCard(
+                    modifier = Modifier.weight(1f),
+                    onClick = { showImportDialog = true },
+                    enabled = hasStoragePermission
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        Icon(
+                            Icons.Default.Download,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
                         Text(
-                            text = "Действия",
+                            "Импорт",
                             style = MaterialTheme.typography.titleMedium
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        // Экспорт
-                        ListItem(
-                            headlineContent = { Text("Экспортировать все заметки") },
-                            supportingContent = { 
-                                Text("Сохранить копию всех заметок во внешнее хранилище")
-                            },
-                            leadingContent = {
-                                Icon(
-                                    Icons.Default.Upload,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            modifier = Modifier.clickable(enabled = hasStoragePermission) {
-                                showExportDialog = true
-                            }
-                        )
-                        
-                        // Импорт
-                        ListItem(
-                            headlineContent = { Text("Импортировать заметки") },
-                            supportingContent = { 
-                                Text("Загрузить заметки из внешнего хранилища")
-                            },
-                            leadingContent = {
-                                Icon(
-                                    Icons.Default.Download,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            modifier = Modifier.clickable(enabled = hasStoragePermission) {
-                                showImportDialog = true
-                            }
-                        )
-                    }
-                }
-            }
-
-            // Секция файлов для отправки
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Файлы для отправки",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            IconButton(onClick = {
-                                val currentLastViewedFile = lastViewedFile
-                                currentLastViewedFile?.let { file ->
-                                    val noteId = file.nameWithoutExtension.toLong()
-                                    val shareFile = viewModel.prepareNoteForSharing(noteId)
-                                    if (shareFile != null) {
-                                        val shareIntent = Intent().apply {
-                                            action = Intent.ACTION_SEND
-                                            putExtra(
-                                                Intent.EXTRA_STREAM,
-                                                FileProvider.getUriForFile(
-                                                    context,
-                                                    "${context.packageName}.provider",
-                                                    shareFile
-                                                )
-                                            )
-                                            type = "text/markdown"
-                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                        }
-                                        context.startActivity(Intent.createChooser(shareIntent, "Отправить заметку"))
-                                    }
-                                }
-                            }) {
-                                Icon(
-                                    Icons.Default.Share,
-                                    contentDescription = "Отправить",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        val currentLastViewedFile = lastViewedFile
-                        if (currentLastViewedFile != null) {
-                            val noteContent = viewModel.readNoteContent(currentLastViewedFile)
-                            val title = noteContent.lines().firstOrNull()?.trim()?.removePrefix("#")?.trim() ?: "Без названия"
-                            val preview = noteContent.lines().drop(1).joinToString("\n").take(100)
-                            
-                            ListItem(
-                                headlineContent = { Text(title) },
-                                supportingContent = { 
-                                    if (preview.isNotEmpty()) {
-                                        Text(
-                                            text = preview + if (preview.length >= 100) "..." else "",
-                                            maxLines = 2
-                                        )
-                                    }
-                                },
-                                leadingContent = {
-                                    Icon(
-                                        Icons.Default.Description,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            )
-                        } else {
-                            Text(
-                                text = "Нет файлов для отправки",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Секция настроек экспорта
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
                         Text(
-                            text = "Настройки экспорта",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        ListItem(
-                            headlineContent = { Text("Директория экспорта") },
-                            supportingContent = { 
-                                Text(exportDirectory?.absolutePath ?: "Не выбрана")
-                            },
-                            leadingContent = {
-                                Icon(
-                                    Icons.Default.Folder,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            trailingContent = {
-                                IconButton(onClick = { showDirectoryPicker = true }) {
-                                    Icon(
-                                        Icons.Default.Edit,
-                                        contentDescription = "Изменить"
-                                    )
-                                }
-                            }
+                            "Загрузить заметки",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             }
 
-            // Справка
-            item {
-                Card(
+            // Директория экспорта
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
+                    Text(
+                        "Директория экспорта",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Как это работает",
-                            style = MaterialTheme.typography.titleMedium
+                        Icon(
+                            Icons.Default.Folder,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            exportDirectory?.path ?: "Не выбрана",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { directoryPicker.launch(null) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Изменить")
+                        }
                         
-                        Text(
-                            text = "• Кнопка 'Хранилище' в меню открывает папку с экспортированными файлами",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "• Кнопка 'Отправка' предлагает отправить текущую открытую заметку",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "• В настройках экспорта можно выбрать папку для сохранения файлов",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "• Экспортированные файлы можно отправить в любое приложение",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Button(
+                            onClick = {
+                                exportDirectory?.let { dir ->
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW)
+                                        val uri = Uri.parse("content://com.android.externalstorage.documents/tree/primary%3A${dir.name}")
+                                        intent.setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
+                                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        Log.e("FileManagement", "Ошибка при открытии директории", e)
+                                    }
+                                }
+                            },
+                            enabled = exportDirectory != null,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                Icons.Default.FolderOpen,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Открыть")
+                        }
                     }
                 }
             }
@@ -353,35 +348,105 @@ fun FileManagementScreen(
         if (showExportDialog) {
             AlertDialog(
                 onDismissRequest = { showExportDialog = false },
+                icon = { Icon(Icons.Default.Upload, contentDescription = null) },
                 title = { Text("Экспорт заметок") },
-                text = { Text("Все заметки будут экспортированы во внешнее хранилище. Продолжить?") },
+                text = { 
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Все заметки будут экспортированы в директорию:")
+                        exportDirectory?.let { dir ->
+                            Text(
+                                dir.absolutePath,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } ?: Text(
+                            "Директория не выбрана",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+
+                        when (val progress = exportProgress) {
+                            is MainViewModel.ExportProgress.InProgress -> {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    LinearProgressIndicator(
+                                        progress = progress.current.toFloat() / progress.total,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    Text(
+                                        "Экспортировано ${progress.current} из ${progress.total}",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                            is MainViewModel.ExportProgress.Error -> {
+                                Text(
+                                    progress.message,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                            else -> {}
+                        }
+                    }
+                },
                 confirmButton = {
-                    Button(onClick = {
-                        // TODO: Реализовать экспорт
-                        showExportDialog = false
-                    }) {
+                    Button(
+                        onClick = {
+                            exportDirectory?.let { dir ->
+                                Log.d("FileManagement", "Начало экспорта в директорию: ${dir.absolutePath}")
+                                viewModel.exportNotes(dir)
+                            }
+                        },
+                        enabled = exportDirectory != null && exportProgress !is MainViewModel.ExportProgress.InProgress
+                    ) {
                         Text("Экспортировать")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showExportDialog = false }) {
+                    TextButton(
+                        onClick = { showExportDialog = false },
+                        enabled = exportProgress !is MainViewModel.ExportProgress.InProgress
+                    ) {
                         Text("Отмена")
                     }
                 }
             )
         }
 
+        // Показываем уведомление об успешном экспорте
+        LaunchedEffect(exportProgress) {
+            when (exportProgress) {
+                is MainViewModel.ExportProgress.Success -> {
+                    showExportDialog = false
+                    snackbarHostState.showSnackbar(
+                        message = "Экспорт успешно завершен",
+                        duration = SnackbarDuration.Short
+                    )
+                }
+                is MainViewModel.ExportProgress.Error -> {
+                    snackbarHostState.showSnackbar(
+                        message = (exportProgress as MainViewModel.ExportProgress.Error).message,
+                        duration = SnackbarDuration.Long
+                    )
+                }
+                else -> {}
+            }
+        }
+
         // Диалог импорта
         if (showImportDialog) {
             AlertDialog(
                 onDismissRequest = { showImportDialog = false },
+                icon = { Icon(Icons.Default.Download, contentDescription = null) },
                 title = { Text("Импорт заметок") },
                 text = { Text("Выберите файл для импорта") },
                 confirmButton = {
-                    Button(onClick = {
-                        pickFile.launch("*/*")
-                        showImportDialog = false
-                    }) {
+                    Button(
+                        onClick = {
+                            pickFile.launch("*/*")
+                            showImportDialog = false
+                        }
+                    ) {
                         Text("Выбрать файл")
                     }
                 },

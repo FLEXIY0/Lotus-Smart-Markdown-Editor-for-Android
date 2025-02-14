@@ -26,6 +26,8 @@ import java.util.*
 import android.util.Log
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import android.os.Environment
+import kotlinx.coroutines.flow.first
 
 data class Note(
     val id: Long,
@@ -127,6 +129,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val TAG = "SPEECH_DEBUG"
 
+    private val _exportProgress = MutableStateFlow<ExportProgress>(ExportProgress.Idle)
+    val exportProgress: StateFlow<ExportProgress> = _exportProgress
+
+    sealed class ExportProgress {
+        data object Idle : ExportProgress()
+        data class InProgress(val current: Int, val total: Int) : ExportProgress()
+        data class Error(val message: String) : ExportProgress()
+        data object Success : ExportProgress()
+    }
+
     init {
         loadNotes()
         loadLastViewedNote()
@@ -154,20 +166,78 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun initExportDirectory() {
         viewModelScope.launch(Dispatchers.IO) {
             val context = getApplication<Application>()
-            val defaultDir = File(context.getExternalFilesDir(null), "Lotus")
-            if (!defaultDir.exists()) {
-                defaultDir.mkdirs()
+            Log.d("FileManagement", "Инициализация директории экспорта")
+            
+            try {
+                // Пытаемся загрузить сохраненный путь
+                val savedPath = userPreferences.exportDirectory.first()
+                if (savedPath != null) {
+                    val savedDir = File(savedPath)
+                    if (savedDir.exists() && savedDir.canWrite()) {
+                        _exportDirectory.value = savedDir
+                        Log.d("FileManagement", "Загружена сохраненная директория: ${savedDir.absolutePath}")
+                        return@launch
+                    }
+                }
+
+                // Если сохраненный путь не найден или недоступен, используем путь по умолчанию
+                val defaultDir = File(Environment.getExternalStorageDirectory(), "Lotus")
+                if (!defaultDir.exists()) {
+                    val created = defaultDir.mkdirs()
+                    Log.d("FileManagement", "Создание основной директории: $created")
+                }
+                Log.d("FileManagement", "Путь к основной директории: ${defaultDir.absolutePath}")
+                if (defaultDir.canWrite()) {
+                    _exportDirectory.value = defaultDir
+                    userPreferences.setExportDirectory(defaultDir.absolutePath)
+                    Log.d("FileManagement", "Установлена основная директория")
+                } else {
+                    throw SecurityException("Нет прав на запись в директорию")
+                }
+            } catch (e: Exception) {
+                Log.e("FileManagement", "Ошибка при инициализации директории", e)
+                // Используем резервный вариант - внутреннюю память приложения
+                val backupDir = File(context.getExternalFilesDir(null), "Lotus")
+                if (!backupDir.exists()) {
+                    val created = backupDir.mkdirs()
+                    Log.d("FileManagement", "Создание резервной директории: $created")
+                }
+                Log.d("FileManagement", "Использование резервной директории: ${backupDir.absolutePath}")
+                _exportDirectory.value = backupDir
+                userPreferences.setExportDirectory(backupDir.absolutePath)
             }
-            _exportDirectory.value = defaultDir
         }
     }
 
     fun setExportDirectory(directory: File) {
         viewModelScope.launch(Dispatchers.IO) {
-            if (!directory.exists()) {
-                directory.mkdirs()
+            Log.d("FileManagement", "Установка новой директории экспорта: ${directory.absolutePath}")
+            try {
+                if (!directory.exists()) {
+                    val created = directory.mkdirs()
+                    Log.d("FileManagement", "Создание новой директории: $created")
+                }
+                
+                if (!directory.canWrite()) {
+                    Log.e("FileManagement", "Нет прав на запись в директорию: ${directory.absolutePath}")
+                    throw SecurityException("Нет прав на запись в директорию")
+                }
+                
+                _exportDirectory.value = directory
+                userPreferences.setExportDirectory(directory.absolutePath)
+                Log.d("FileManagement", "Директория экспорта успешно обновлена")
+            } catch (e: Exception) {
+                Log.e("FileManagement", "Ошибка при установке директории экспорта", e)
+                // В случае ошибки используем резервный вариант
+                val context = getApplication<Application>()
+                val backupDir = File(context.getExternalFilesDir(null), "Lotus")
+                if (!backupDir.exists()) {
+                    backupDir.mkdirs()
+                }
+                Log.d("FileManagement", "Использование резервной директории: ${backupDir.absolutePath}")
+                _exportDirectory.value = backupDir
+                userPreferences.setExportDirectory(backupDir.absolutePath)
             }
-            _exportDirectory.value = directory
         }
     }
 
@@ -887,5 +957,85 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun readNoteContent(file: File): String {
         return FileUtils.readNoteContent(getApplication(), file.nameWithoutExtension.toLong())
+    }
+
+    fun createNewNoteWithContent(content: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val file = FileUtils.createNoteFile(getApplication())
+            val noteId = MarkdownUtils.extractNoteId(file)
+            val now = System.currentTimeMillis()
+            
+            // Создаем новую заметку с импортированным содержимым
+            val newNote = Note(
+                id = noteId,
+                title = MarkdownUtils.extractTitle(content),
+                preview = MarkdownUtils.getPreview(content),
+                content = content,
+                modifiedAt = now,
+                createdAt = now,
+                isPreviewMode = false,
+                isPinned = false,
+                order = 0
+            )
+            
+            _currentNote.value = newNote
+            FileUtils.saveNote(getApplication(), noteId, content)
+            FileUtils.saveLastViewedNoteId(getApplication(), noteId)
+            loadNotes()
+        }
+    }
+
+    fun exportNotes(directory: File) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _exportProgress.value = ExportProgress.Idle
+            Log.d("FileManagement", "Начало экспорта заметок в директорию: ${directory.absolutePath}")
+            try {
+                val context = getApplication<Application>()
+                val notes = _notes.value
+                Log.d("FileManagement", "Количество заметок для экспорта: ${notes.size}")
+                
+                // Создаем все необходимые директории
+                directory.mkdirs()
+                if (!directory.exists() || !directory.canWrite()) {
+                    throw SecurityException("Нет доступа к директории ${directory.absolutePath}")
+                }
+                
+                notes.forEachIndexed { index, note ->
+                    _exportProgress.value = ExportProgress.InProgress(index + 1, notes.size)
+                    try {
+                        val title = note.title.ifEmpty { "Без названия" }
+                        Log.d("FileManagement", "Экспорт заметки $index: $title")
+                        
+                        val fileName = title
+                            .replace(Regex("[^a-zA-Zа-яА-Я0-9\\s-]"), "")
+                            .replace(Regex("\\s+"), "_")
+                            .take(50)
+                            .trim('_')
+                            .let { if (it.isEmpty()) "note" else it }
+                            
+                        var finalFileName = "${fileName}.md"
+                        var counter = 1
+                        while (File(directory, finalFileName).exists()) {
+                            finalFileName = "${fileName}_${counter}.md"
+                            counter++
+                        }
+                        
+                        val targetFile = File(directory, finalFileName)
+                        targetFile.writeText(note.content)
+                        Log.d("FileManagement", "Заметка успешно экспортирована в файл: ${targetFile.name}")
+                        
+                    } catch (e: Exception) {
+                        Log.e("FileManagement", "Ошибка при экспорте заметки ${note.id}", e)
+                        _exportProgress.value = ExportProgress.Error("Ошибка при экспорте заметки: ${note.title}")
+                        return@launch
+                    }
+                }
+                Log.d("FileManagement", "Экспорт заметок завершен")
+                _exportProgress.value = ExportProgress.Success
+            } catch (e: Exception) {
+                Log.e("FileManagement", "Ошибка при экспорте заметок", e)
+                _exportProgress.value = ExportProgress.Error(e.message ?: "Неизвестная ошибка")
+            }
+        }
     }
 } 
