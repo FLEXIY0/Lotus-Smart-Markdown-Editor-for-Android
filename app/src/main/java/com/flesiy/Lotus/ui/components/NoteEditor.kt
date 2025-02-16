@@ -90,6 +90,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.collectAsState
 import com.flesiy.Lotus.utils.FileUtils
 import com.flesiy.Lotus.viewmodel.MainViewModel
+import android.view.inputmethod.InputMethodManager
+import android.content.Context
 
 private const val TAG = "NoteEditor"
 
@@ -666,48 +668,56 @@ fun NoteEditor(
             }
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(end = 4.dp)
-                .verticalScroll(scrollState)
-                .drawScrollbar(
-                    state = scrollState,
-                    color = MaterialTheme.colorScheme.surfaceVariant
-                ),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Box(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .defaultMinSize(minHeight = 400.dp)
-                    .padding(horizontal = 16.dp)
+                    .fillMaxSize()
+                    .padding(end = 4.dp)
+                    .verticalScroll(scrollState)
+                    .drawScrollbar(
+                        state = scrollState,
+                        color = MaterialTheme.colorScheme.surfaceVariant
+                    )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         enabled = !isPreviewMode
                     ) {
                         Log.d(TAG, "Editor area clicked")
-                        editorRef?.requestFocus()
+                        editorRef?.let { editor ->
+                            editor.requestFocus()
+                            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                            imm.showSoftInput(editor, InputMethodManager.SHOW_IMPLICIT)
+                        }
                     }
             ) {
-                AnimatedMarkdownContent(
-                    content = note.content,
-                    onContentChange = { newContent ->
-                        if (newContent != note.content) {
-                            hasUnsavedChanges = true
-                            onContentChange(newContent)
-                        }
-                    },
-                    isPreviewMode = isPreviewMode,
-                    modifier = Modifier.fillMaxWidth(),
-                    hint = "Соберитесь с мыслями...",
-                    onEditorCreated = { editor ->
-                        editorRef = editor
-                    },
-                    fontSize = fontSize
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 400.dp)
+                        .padding(horizontal = 16.dp)
+                ) {
+                    AnimatedMarkdownContent(
+                        content = note.content,
+                        onContentChange = { newContent ->
+                            if (newContent != note.content) {
+                                hasUnsavedChanges = true
+                                onContentChange(newContent)
+                            }
+                        },
+                        isPreviewMode = isPreviewMode,
+                        modifier = Modifier.fillMaxWidth(),
+                        hint = "Соберитесь с мыслями...",
+                        onEditorCreated = { editor ->
+                            editorRef = editor
+                        },
+                        fontSize = fontSize
+                    )
+                }
             }
         }
     }

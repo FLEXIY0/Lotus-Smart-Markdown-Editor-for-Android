@@ -310,12 +310,10 @@ private fun createEditor(
         isFocusableInTouchMode = true
         
         // Показываем клавиатуру при получении фокуса
-        setOnFocusChangeListener { _, hasFocus ->
+        setOnFocusChangeListener { view, hasFocus ->
             if (hasFocus) {
-                postDelayed({
-                    val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                    imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
-                }, 100)
+                val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
             }
         }
 
