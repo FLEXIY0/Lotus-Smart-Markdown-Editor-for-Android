@@ -12,6 +12,9 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.tween
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -783,10 +786,33 @@ fun NoteEditor(
     }
 
     if (showNotificationsPanel) {
-        AlertDialog(
-            onDismissRequest = { showNotificationsPanel = false },
-            modifier = Modifier.fillMaxWidth(0.9f),
-            content = {
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Затемнение фона
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.32f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { showNotificationsPanel = false }
+            )
+            
+            // Панель уведомлений
+            AnimatedVisibility(
+                visible = showNotificationsPanel,
+                modifier = Modifier.align(Alignment.CenterEnd),
+                enter = slideInHorizontally(
+                    initialOffsetX = { it },
+                    animationSpec = tween(300)
+                ) + fadeIn(animationSpec = tween(300)),
+                exit = slideOutHorizontally(
+                    targetOffsetX = { it },
+                    animationSpec = tween(300)
+                ) + fadeOut(animationSpec = tween(300))
+            ) {
                 NotificationsPanel(
                     notifications = notifications.filter { it.noteId == note.id },
                     onEditNotification = { notification ->
@@ -802,10 +828,13 @@ fun NoteEditor(
                     onAddNotification = {
                         selectedNotification = null
                         showNotificationDialog = true
-                    }
+                    },
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(320.dp)
                 )
             }
-        )
+        }
     }
 
     if (showNotificationDialog) {

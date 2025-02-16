@@ -4,10 +4,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -27,80 +26,64 @@ fun NotificationsPanel(
     onAddNotification: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 16.dp)
+    Surface(
+        modifier = modifier,
+        tonalElevation = 3.dp,
+        shadowElevation = 3.dp
     ) {
-        // Заголовок и кнопка добавления
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp)
         ) {
-            Text(
-                "Уведомления",
-                style = MaterialTheme.typography.titleLarge
-            )
-            
-            FilledTonalButton(
-                onClick = onAddNotification,
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-            ) {
-                Text("Добавить")
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        if (notifications.isEmpty()) {
-            // Состояние пустого списка
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_notification),
-                    contentDescription = null,
+            if (notifications.isEmpty()) {
+                Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .padding(bottom = 8.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                )
-                Text(
-                    "Нет активных уведомлений",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    "Нажмите «Добавить», чтобы создать новое уведомление",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-        } else {
-            // Список уведомлений
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(notifications) { notification ->
-                    NotificationItem(
-                        notification = notification,
-                        onEdit = { onEditNotification(notification) },
-                        onDelete = { onDeleteNotification(notification) },
-                        onToggle = { onToggleNotification(notification) }
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "Нет уведомлений",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    items(notifications) { notification ->
+                        NotificationItem(
+                            notification = notification,
+                            onEdit = { onEditNotification(notification) },
+                            onDelete = { onDeleteNotification(notification) },
+                            onToggle = { onToggleNotification(notification) }
+                        )
+                    }
+                }
+            }
+
+            Divider(modifier = Modifier.padding(vertical = 16.dp))
+
+            Button(
+                onClick = onAddNotification,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_notification),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text("Добавить уведомление")
                 }
             }
         }
