@@ -998,8 +998,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return FileUtils.readNoteContent(getApplication(), file.nameWithoutExtension.toLong())
     }
 
-    fun createNewNoteWithContent(content: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+    suspend fun createNewNoteWithContent(content: String): Long {
+        return withContext(Dispatchers.IO) {
             val file = FileUtils.createNoteFile(getApplication())
             val noteId = MarkdownUtils.extractNoteId(file)
             val now = System.currentTimeMillis()
@@ -1021,6 +1021,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             FileUtils.saveNote(getApplication(), noteId, content)
             FileUtils.saveLastViewedNoteId(getApplication(), noteId)
             loadNotes()
+            noteId
         }
     }
 

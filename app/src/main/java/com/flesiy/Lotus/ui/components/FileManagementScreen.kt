@@ -25,6 +25,7 @@ import com.flesiy.Lotus.viewmodel.MainViewModel
 import java.io.File
 import android.util.Log
 import android.provider.DocumentsContract
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +44,7 @@ fun FileManagementScreen(
     var showImportDialog by remember { mutableStateOf(false) }
     var showDirectoryPicker by remember { mutableStateOf(false) }
     val exportProgress by viewModel.exportProgress.collectAsState()
+    val scope = rememberCoroutineScope()
 
     // Проверяем разрешения при запуске
     LaunchedEffect(Unit) {
@@ -127,7 +129,9 @@ fun FileManagementScreen(
             context.contentResolver.openInputStream(selectedUri)?.use { inputStream ->
                 val content = inputStream.bufferedReader().readText()
                 // Создаем новую заметку с импортированным содержимым
-                viewModel.createNewNoteWithContent(content)
+                scope.launch {
+                    viewModel.createNewNoteWithContent(content)
+                }
             }
         }
     }

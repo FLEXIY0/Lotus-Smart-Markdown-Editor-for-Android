@@ -82,6 +82,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -97,7 +98,9 @@ import com.flesiy.Lotus.ui.components.SearchDialog
 import com.flesiy.Lotus.ui.components.TrashScreen
 import com.flesiy.Lotus.ui.theme.LotusTheme
 import com.flesiy.Lotus.viewmodel.MainViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     private var viewModelInstance: MainViewModel? = null
@@ -182,25 +185,37 @@ class MainActivity : ComponentActivity() {
     private fun handleIncomingIntent(intent: Intent, viewModel: MainViewModel) {
         if (intent.action == Intent.ACTION_VIEW) {
             intent.data?.let { uri ->
-                try {
-                    contentResolver.openInputStream(uri)?.use { inputStream ->
-                        val content = inputStream.bufferedReader().readText()
-                        viewModel.createNewNoteWithContent(content)
-                        // Переходим к редактору
-                        currentNavController?.navigate("editor") {
-                            popUpTo(currentNavController!!.graph.findStartDestination().id) {
-                                inclusive = true
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        withContext(Dispatchers.IO) {
+                            contentResolver.openInputStream(uri)?.use { inputStream ->
+                                val content = inputStream.bufferedReader().readText()
+                                val noteId = viewModel.createNewNoteWithContent(content)
+                                withContext(Dispatchers.Main) {
+                                    // Устанавливаем режим предпросмотра для новой заметки
+                                    viewModel.updatePreviewMode(true)
+                                    // Загружаем заметку
+                                    viewModel.loadNote(noteId)
+                                    // Переходим к редактору
+                                    currentNavController?.navigate("editor") {
+                                        popUpTo(currentNavController!!.graph.findStartDestination().id) {
+                                            inclusive = true
+                                        }
+                                        launchSingleTop = true
+                                    }
+                                }
                             }
-                            launchSingleTop = true
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Log.e("MainActivity", "Ошибка при открытии файла", e)
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Не удалось открыть файл: ${e.localizedMessage}",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                     }
-                } catch (e: Exception) {
-                    Log.e("MainActivity", "Ошибка при открытии файла", e)
-                    Toast.makeText(
-                        this,
-                        "Не удалось открыть файл: ${e.localizedMessage}",
-                        Toast.LENGTH_LONG
-                    ).show()
                 }
             }
         }
