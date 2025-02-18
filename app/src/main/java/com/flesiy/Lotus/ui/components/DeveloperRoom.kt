@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.flesiy.Lotus.viewmodel.MainViewModel
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import com.flesiy.Lotus.viewmodel.ThemeViewModel
 
 private const val DEFAULT_SYSTEM_PROMPT = """When a user sends you a message:
 
@@ -35,6 +36,7 @@ private const val DEFAULT_SYSTEM_PROMPT = """When a user sends you a message:
 fun DeveloperRoom(
     onBack: () -> Unit,
     viewModel: MainViewModel,
+    themeViewModel: ThemeViewModel,
     modifier: Modifier = Modifier
 ) {
     val isTextProcessorEnabled by viewModel.isTextProcessorEnabled.collectAsState()
@@ -341,6 +343,57 @@ fun DeveloperRoom(
                             checked = viewModel.isTodoEnabled.collectAsState().value,
                             onCheckedChange = { enabled ->
                                 viewModel.setTodoEnabled(enabled)
+                            }
+                        )
+                    }
+                }
+            }
+
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Настройки темы",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "Классическая тема",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text = "Минималистичный дизайн в стиле Cupertino с чёрно-белой цветовой схемой",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Switch(
+                            checked = themeViewModel.useClassicTheme.collectAsState().value,
+                            onCheckedChange = { enabled ->
+                                themeViewModel.setUseClassicTheme(enabled)
                             }
                         )
                     }

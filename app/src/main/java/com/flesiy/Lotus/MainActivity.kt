@@ -25,6 +25,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -67,6 +68,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -98,9 +100,19 @@ import com.flesiy.Lotus.ui.components.SearchDialog
 import com.flesiy.Lotus.ui.components.TrashScreen
 import com.flesiy.Lotus.ui.theme.LotusTheme
 import com.flesiy.Lotus.viewmodel.MainViewModel
+import com.flesiy.Lotus.viewmodel.ThemeViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.graphics.Color
+import com.flesiy.Lotus.ui.theme.classic_light_secondaryContainer
+import com.flesiy.Lotus.ui.theme.classic_light_onSecondaryContainer
+import com.flesiy.Lotus.ui.theme.classic_light_secondary
+import com.flesiy.Lotus.ui.theme.classic_dark_secondaryContainer
+import com.flesiy.Lotus.ui.theme.classic_dark_onSecondaryContainer
+import com.flesiy.Lotus.ui.theme.classic_dark_secondary
+import androidx.compose.ui.res.painterResource
+import com.flesiy.Lotus.R
 
 class MainActivity : ComponentActivity() {
     private var viewModelInstance: MainViewModel? = null
@@ -152,7 +164,14 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            LotusTheme {
+            val themeViewModel: ThemeViewModel = viewModel()
+            val useClassicTheme by themeViewModel.useClassicTheme.collectAsState()
+            val darkTheme = isSystemInDarkTheme()
+            
+            LotusTheme(
+                useClassicTheme = useClassicTheme,
+                darkTheme = darkTheme
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -168,9 +187,12 @@ class MainActivity : ComponentActivity() {
 
                     LotusApp(
                         viewModel = viewModel,
+                        themeViewModel = themeViewModel,
                         onNavControllerCreated = { navController ->
                             currentNavController = navController
-                        }
+                        },
+                        useClassicTheme = useClassicTheme,
+                        darkTheme = darkTheme
                     )
                 }
             }
@@ -240,7 +262,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun LotusApp(
     viewModel: MainViewModel,
-    onNavControllerCreated: (NavController) -> Unit
+    themeViewModel: ThemeViewModel,
+    onNavControllerCreated: (NavController) -> Unit,
+    useClassicTheme: Boolean = false,
+    darkTheme: Boolean = isSystemInDarkTheme()
 ) {
     val navController = rememberNavController()
     var showFontSizeDialog by remember { mutableStateOf(false) }
@@ -307,8 +332,12 @@ fun LotusApp(
         drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier.width(300.dp),
-                drawerContainerColor = MaterialTheme.colorScheme.surface,
-                drawerContentColor = MaterialTheme.colorScheme.onSurface
+                drawerContainerColor = if (useClassicTheme) {
+                    if (darkTheme) classic_dark_secondaryContainer else Color.White
+                } else MaterialTheme.colorScheme.surface,
+                drawerContentColor = if (useClassicTheme) {
+                    if (darkTheme) Color.White else Color.Black
+                } else MaterialTheme.colorScheme.onSurface
             ) {
                 Column(
                     modifier = Modifier.fillMaxHeight()
@@ -540,7 +569,7 @@ fun LotusApp(
                                 scope.launch {
                                     drawerState.close()
                                 }
-                                navigateSafely("developer_room")
+                                navigateSafely("developer")
                             }
                         )
                     }
@@ -561,7 +590,14 @@ fun LotusApp(
                 Scaffold(
                     topBar = {
                         TopAppBar(
-                            title = { Text("Lotus") },
+                            title = { 
+                                Text(
+                                    "Lotus",
+                                    color = if (useClassicTheme) {
+                                        if (darkTheme) Color.White else Color.Black
+                                    } else MaterialTheme.colorScheme.onSurface
+                                ) 
+                            },
                             navigationIcon = {
                                 IconButton(onClick = {
                                     scope.launch {
@@ -572,15 +608,33 @@ fun LotusApp(
                                         drawerState.open()
                                     }
                                 }) {
-                                    Icon(Icons.Default.Menu, contentDescription = "Меню")
+                                    Icon(
+                                        Icons.Default.Menu,
+                                        contentDescription = "Меню",
+                                        tint = if (useClassicTheme) {
+                                            if (darkTheme) Color.White else Color.Black
+                                        } else MaterialTheme.colorScheme.onSurface
+                                    )
                                 }
                             },
                             actions = {
                                 IconButton(onClick = { showFontSizeDialog = true }) {
-                                    Icon(Icons.Default.FormatSize, contentDescription = "Размер шрифта")
+                                    Icon(
+                                        Icons.Default.FormatSize,
+                                        contentDescription = "Размер шрифта",
+                                        tint = if (useClassicTheme) {
+                                            if (darkTheme) classic_dark_secondary else classic_light_secondary
+                                        } else MaterialTheme.colorScheme.onSurface
+                                    )
                                 }
                                 IconButton(onClick = { showSearchDialog = true }) {
-                                    Icon(Icons.Default.Search, contentDescription = "Поиск")
+                                    Icon(
+                                        Icons.Default.Search,
+                                        contentDescription = "Поиск",
+                                        tint = if (useClassicTheme) {
+                                            if (darkTheme) classic_dark_secondary else classic_light_secondary
+                                        } else MaterialTheme.colorScheme.onSurface
+                                    )
                                 }
                                 if (currentNote.isPreviewMode) {
                                     IconButton(
@@ -590,10 +644,14 @@ fun LotusApp(
                                         Icon(
                                             Icons.Default.History,
                                             contentDescription = "История версий",
-                                            tint = if (viewModel.isVersionHistoryVisible.collectAsState().value)
-                                                MaterialTheme.colorScheme.primary
-                                            else
-                                                MaterialTheme.colorScheme.onSurface
+                                            tint = if (useClassicTheme) {
+                                                if (darkTheme) classic_dark_secondary else classic_light_secondary
+                                            } else {
+                                                if (viewModel.isVersionHistoryVisible.collectAsState().value)
+                                                    MaterialTheme.colorScheme.primary
+                                                else
+                                                    MaterialTheme.colorScheme.onSurface
+                                            }
                                         )
                                     }
                                 }
@@ -609,15 +667,37 @@ fun LotusApp(
                                         Icons.Default.Clear,
                                         contentDescription = "Удалить заметку",
                                         modifier = Modifier.size(20.dp),
-                                        tint = MaterialTheme.colorScheme.onSurface
+                                        tint = if (useClassicTheme) {
+                                            if (darkTheme) classic_dark_secondary else classic_light_secondary
+                                        } else MaterialTheme.colorScheme.onSurface
                                     )
                                 }
                                 IconButton(onClick = {
                                     viewModel.createNewNote()
                                 }) {
-                                    Icon(Icons.Default.Add, contentDescription = "Новая заметка")
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.add_24),
+                                        contentDescription = "Новая заметка",
+                                        tint = if (useClassicTheme) {
+                                            if (darkTheme) classic_dark_secondary else classic_light_secondary
+                                        } else MaterialTheme.colorScheme.onSurface
+                                    )
                                 }
-                            }
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = if (useClassicTheme) {
+                                    if (darkTheme) classic_dark_secondaryContainer else Color.White
+                                } else MaterialTheme.colorScheme.surface,
+                                titleContentColor = if (useClassicTheme) {
+                                    if (darkTheme) Color.White else Color.Black
+                                } else MaterialTheme.colorScheme.onSurface,
+                                navigationIconContentColor = if (useClassicTheme) {
+                                    if (darkTheme) Color.White else Color.Black
+                                } else MaterialTheme.colorScheme.onSurface,
+                                actionIconContentColor = if (useClassicTheme) {
+                                    if (darkTheme) classic_dark_secondary else classic_light_secondary
+                                } else MaterialTheme.colorScheme.onSurface
+                            )
                         )
                     }
                 ) { padding ->
@@ -772,40 +852,14 @@ fun LotusApp(
             }
 
             composable(
-                route = "developer_room",
-                enterTransition = { 
-                    slideInHorizontally(
-                        initialOffsetX = { it },
-                        animationSpec = tween(300)
-                    ) + fadeIn(animationSpec = tween(300))
-                },
-                exitTransition = { 
-                    slideOutHorizontally(
-                        targetOffsetX = { -it },
-                        animationSpec = tween(300)
-                    ) + fadeOut(animationSpec = tween(300))
-                },
-                popEnterTransition = { 
-                    slideInHorizontally(
-                        initialOffsetX = { -it },
-                        animationSpec = tween(300)
-                    ) + fadeIn(animationSpec = tween(300))
-                },
-                popExitTransition = { 
-                    slideOutHorizontally(
-                        targetOffsetX = { it },
-                        animationSpec = tween(300)
-                    ) + fadeOut(animationSpec = tween(300))
-                }
+                route = "developer",
+                enterTransition = { fadeIn(animationSpec = tween(300)) },
+                exitTransition = { fadeOut(animationSpec = tween(300)) }
             ) {
-                BackHandler {
-                    navController.popBackStack()
-                }
                 DeveloperRoom(
-                    onBack = {
-                        navController.popBackStack()
-                    },
-                    viewModel = viewModel
+                    onBack = { navController.navigateUp() },
+                    viewModel = viewModel,
+                    themeViewModel = themeViewModel
                 )
             }
         }
