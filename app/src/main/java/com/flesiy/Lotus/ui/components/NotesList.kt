@@ -3,6 +3,7 @@ package com.flesiy.Lotus.ui.components
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
@@ -64,15 +65,15 @@ private fun Modifier.draggedItem(isDragging: Boolean): Modifier = composed {
     this
         .graphicsLayer {
             if (isDragging) {
-                scaleX = 1.05f
-                scaleY = 1.05f
-                shadowElevation = 16f
-                alpha = 0.9f
+                scaleX = 1.02f
+                scaleY = 1.02f
+                shadowElevation = 8f
+                alpha = 0.95f
             }
         }
         .background(
             color = if (isDragging) 
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             else 
                 Color.Transparent
         )
@@ -229,29 +230,17 @@ private fun NoteItem(
             SwipeAction.DELETE -> if (isAnimatingSwipe) maxSwipe else offsetX
             null -> offsetX
         },
-        animationSpec = when (targetAction) {
-            SwipeAction.PIN -> tween(
-                durationMillis = if (abs(velocityX) > 3000) 200 else 400,
-                easing = FastOutSlowInEasing
-            )
-            SwipeAction.DELETE -> tween(
-                durationMillis = 200,
-                easing = FastOutSlowInEasing
-            )
-            null -> tween(
-                durationMillis = 200,
-                easing = FastOutSlowInEasing
-            )
-        },
+        animationSpec = tween(
+            durationMillis = 150,
+            easing = LinearEasing
+        ),
         finishedListener = {
             if (isAnimatingSwipe) {
                 when (targetAction) {
                     SwipeAction.PIN -> {
-                        // Сначала завершаем анимацию
                         MainScope().launch {
-                            delay(200) // Даем время на завершение анимации
+                            delay(100)
                             onNotePinned(note.id)
-                            delay(50) // Небольшая пауза перед сбросом состояния
                             offsetX = 0f
                             isAnimatingSwipe = false
                             targetAction = null
@@ -260,15 +249,13 @@ private fun NoteItem(
                         }
                     }
                     SwipeAction.DELETE -> {
-                        // Сначала завершаем анимацию
                         MainScope().launch {
-                            delay(200) // Даем время на завершение анимации
+                            delay(100)
                             if (skipDeleteConfirmation) {
                                 onNoteDelete(note.id)
                             } else {
                                 showDeleteDialog = true
                             }
-                            delay(50) // Небольшая пауза перед сбросом состояния
                             offsetX = 0f
                             isAnimatingSwipe = false
                             targetAction = null
@@ -280,6 +267,12 @@ private fun NoteItem(
                         isReturning = false
                     }
                 }
+            } else if (isReturning) {
+                // Сбрасываем состояние после возврата
+                offsetX = 0f
+                isReturning = false
+                targetAction = null
+                velocityX = 0f
             }
         }
     )
@@ -290,8 +283,7 @@ private fun NoteItem(
                 orientation = Orientation.Horizontal,
                 state = rememberDraggableState { delta ->
                     if (!isAnimatingSwipe && !isReturning) {
-                        // Сглаживаем движение при быстром свайпе
-                        val smoothDelta = delta * 0.8f
+                        val smoothDelta = delta * 0.5f
                         offsetX = (offsetX + smoothDelta).coerceIn(-maxSwipe, maxSwipe)
                         velocityX = delta
                     }
@@ -299,19 +291,17 @@ private fun NoteItem(
                 onDragStopped = { velocity ->
                     velocityX = velocity
                     when {
-                        // Учитываем скорость свайпа при определении действия
-                        offsetX < -swipeThreshold || velocity < -2000 -> {
+                        offsetX < -swipeThreshold -> {
                             isAnimatingSwipe = true
                             targetAction = SwipeAction.PIN
                         }
-                        offsetX > swipeThreshold || velocity > 2000 -> {
+                        offsetX > swipeThreshold -> {
                             isAnimatingSwipe = true
                             targetAction = SwipeAction.DELETE
                         }
                         else -> {
                             isReturning = true
-                            offsetX = 0f
-                            velocityX = 0f
+                            targetAction = null
                         }
                     }
                 }
@@ -365,7 +355,7 @@ private fun NoteItem(
                 .padding(horizontal = 16.dp, vertical = 4.dp)
                 .alpha(if (note.isPinned) 1f else 0.9f),
             elevation = CardDefaults.cardElevation(
-                defaultElevation = if (note.isPinned) 4.dp else 2.dp
+                defaultElevation = 0.dp
             ),
             colors = CardDefaults.cardColors(
                 containerColor = if (note.isPinned) 
