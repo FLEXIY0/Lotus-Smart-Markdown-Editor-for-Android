@@ -17,6 +17,16 @@ import com.flesiy.Lotus.viewmodel.MainViewModel
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.flesiy.Lotus.viewmodel.ThemeViewModel
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.ui.text.TextStyle
 
 private const val DEFAULT_SYSTEM_PROMPT = """When a user sends you a message:
 
@@ -218,6 +228,127 @@ fun DeveloperRoom(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Настроить системный промпт")
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // Секция выбора модели
+                        Column {
+                            Text(
+                                text = "Модель",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            
+                            val models by viewModel.availableGroqModels.collectAsState()
+                            val selectedModel by viewModel.selectedGroqModel.collectAsState()
+                            val isLoading by viewModel.isLoadingModels.collectAsState()
+                            val error by viewModel.modelLoadError.collectAsState()
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (isLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    OutlinedButton(
+                                        onClick = { viewModel.loadGroqModels() },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Refresh,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Обновить список")
+                                    }
+                                }
+                            }
+                            
+                            if (error != null) {
+                                Text(
+                                    text = error!!,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                            
+                            if (models.isNotEmpty()) {
+                                var expanded by remember { mutableStateOf(false) }
+                                
+                                ExposedDropdownMenuBox(
+                                    expanded = expanded,
+                                    onExpandedChange = { expanded = it }
+                                ) {
+                                    OutlinedTextField(
+                                        value = selectedModel,
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        trailingIcon = {
+                                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .menuAnchor(),
+                                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                                    )
+                                    
+                                    ExposedDropdownMenu(
+                                        expanded = expanded,
+                                        onDismissRequest = { expanded = false }
+                                    ) {
+                                        models.forEach { model ->
+                                            DropdownMenuItem(
+                                                onClick = {
+                                                    viewModel.setSelectedGroqModel(model.id)
+                                                    expanded = false
+                                                },
+                                                text = { Text(model.id) }
+                                            )
+                                        }
+                                    }
+                                }
+                                
+                                // Кнопка тестирования
+                                val testResult by viewModel.testResult.collectAsState()
+                                Column(
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { viewModel.testGroqModel() },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 8.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.PlayArrow,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Тестировать модель")
+                                    }
+                                    
+                                    if (testResult != null) {
+                                        Text(
+                                            text = testResult!!,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (testResult!!.startsWith("✅")) 
+                                                MaterialTheme.colorScheme.primary 
+                                            else 
+                                                MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.padding(top = 8.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }

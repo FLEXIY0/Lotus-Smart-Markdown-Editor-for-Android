@@ -14,6 +14,8 @@ import com.flesiy.Lotus.utils.MarkdownUtils
 import com.flesiy.Lotus.utils.SpeechRecognitionManager
 import com.flesiy.Lotus.utils.TextProcessor
 import com.flesiy.Lotus.utils.GroqTextProcessor
+import com.flesiy.Lotus.utils.GroqModel
+import com.flesiy.Lotus.utils.RetrofitClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -33,6 +35,8 @@ import java.io.FileInputStream
 import java.io.IOException
 import androidx.documentfile.provider.DocumentFile
 import android.net.Uri
+import com.flesiy.Lotus.utils.GroqRequest
+import com.flesiy.Lotus.utils.Message
 
 data class Note(
     val id: Long,
@@ -120,6 +124,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isGroqEnabled = MutableStateFlow(true)
     val isGroqEnabled = _isGroqEnabled.asStateFlow()
 
+    private val _selectedGroqModel = MutableStateFlow("qwen-2.5-32b")
+    val selectedGroqModel = _selectedGroqModel.asStateFlow()
+
+    private val _availableGroqModels = MutableStateFlow<List<GroqModel>>(emptyList())
+    val availableGroqModels = _availableGroqModels.asStateFlow()
+
+    private val _isLoadingModels = MutableStateFlow(false)
+    val isLoadingModels = _isLoadingModels.asStateFlow()
+
+    private val _modelLoadError = MutableStateFlow<String?>(null)
+    val modelLoadError = _modelLoadError.asStateFlow()
+
     private val _isFileManagementEnabled = MutableStateFlow(false)
     val isFileManagementEnabled = _isFileManagementEnabled.asStateFlow()
 
@@ -142,6 +158,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _exportProgress = MutableStateFlow<ExportProgress>(ExportProgress.Idle)
     val exportProgress: StateFlow<ExportProgress> = _exportProgress
+
+    private val _testResult = MutableStateFlow<String?>(null)
+    val testResult = _testResult.asStateFlow()
 
     sealed class ExportProgress {
         data object Idle : ExportProgress()
@@ -1155,6 +1174,64 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val file = File(getApplication<Application>().filesDir, "last_export_time.txt")
             file.writeText(time.toString())
             _lastExportTime.value = time
+        }
+    }
+
+    fun setSelectedGroqModel(modelId: String) {
+        _selectedGroqModel.value = modelId
+        GroqTextProcessor.setModel(modelId)
+    }
+
+    fun loadGroqModels() {
+        viewModelScope.launch {
+            _isLoadingModels.value = true
+            _modelLoadError.value = null
+            try {
+                val response = RetrofitClient.groqService.listModels()
+                if (response.isSuccessful) {
+                    response.body()?.let { modelsResponse ->
+                        _availableGroqModels.value = modelsResponse.data
+                    } ?: run {
+                        _modelLoadError.value = "Пустой ответ от сервера"
+                    }
+                } else {
+                    _modelLoadError.value = "Ошибка загрузки моделей: ${response.code()}"
+                }
+            } catch (e: Exception) {
+                _modelLoadError.value = "Ошибка при загрузке моделей: ${e.message}"
+            } finally {
+                _isLoadingModels.value = false
+            }
+        }
+    }
+
+    fun testGroqModel(testPrompt: String = "Привет! Это тестовое сообщение.") {
+        viewModelScope.launch {
+            _testResult.value = "Тестирование..."
+            try {
+                val response = RetrofitClient.groqService.generateResponse(
+                    GroqRequest(
+                        messages = listOf(Message("user", testPrompt)),
+                        model = _selectedGroqModel.value,
+                        temperature = 0,
+                        max_completion_tokens = 1024,
+                        top_p = 1,
+                        stream = false,
+                        stop = null
+                    )
+                )
+                _testResult.value = when {
+                    response.isSuccessful -> "✅ Успешно (${response.code()})"
+                    response.code() == 401 -> "❌ Ошибка авторизации (401)"
+                    response.code() == 404 -> "❌ Модель не найдена (404)"
+                    response.code() == 429 -> "❌ Слишком много запросов (429)"
+                    response.code() == 500 -> "❌ Внутренняя ошибка сервера (500)"
+                    response.code() == 503 -> "❌ Сервис недоступен (503)"
+                    else -> "❌ Ошибка: ${response.code()}"
+                }
+            } catch (e: Exception) {
+                _testResult.value = "❌ Ошибка: ${e.message}"
+            }
         }
     }
 } 

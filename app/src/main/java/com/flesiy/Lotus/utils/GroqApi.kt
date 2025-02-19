@@ -5,12 +5,20 @@ import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 
 object GroqApi {
     const val BASE_URL = "https://api.groq.com/openai/v1/"
     const val API_KEY = "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"
 }
+
+data class GroqModel(
+    val id: String,
+    val created: Long,
+    val `object`: String,
+    val owned_by: String
+)
 
 data class Message(
     val role: String,
@@ -47,7 +55,15 @@ data class Usage(
     val total_tokens: Int
 )
 
+data class GroqModelsResponse(
+    val data: List<GroqModel>,
+    val `object`: String
+)
+
 interface GroqService {
+    @GET("models")
+    suspend fun listModels(): Response<GroqModelsResponse>
+
     @POST("chat/completions")
     suspend fun generateResponse(@Body request: GroqRequest): Response<GroqResponse>
 }
