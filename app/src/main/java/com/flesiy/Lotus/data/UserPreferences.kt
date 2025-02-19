@@ -19,6 +19,9 @@ class UserPreferences(private val context: Context) {
     private val FILE_MANAGEMENT_ENABLED = booleanPreferencesKey("file_management_enabled")
     private val EXPORT_DIRECTORY = stringPreferencesKey("export_directory")
     private val EXPORT_ONLY_NEW = booleanPreferencesKey("export_only_new")
+    private val showThinkingTagsKey = booleanPreferencesKey("show_thinking_tags")
+    private val SYSTEM_PROMPT = stringPreferencesKey("system_prompt")
+    private val SELECTED_MODEL = stringPreferencesKey("selected_model")
 
     val skipDeleteConfirmation: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
@@ -124,6 +127,43 @@ class UserPreferences(private val context: Context) {
     suspend fun setExportOnlyNew(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[EXPORT_ONLY_NEW] = enabled
+        }
+    }
+
+    val showThinkingTags: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[showThinkingTagsKey] ?: false
+        }
+
+    suspend fun setShowThinkingTags(show: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[showThinkingTagsKey] = show
+        }
+    }
+
+    val systemPrompt: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[SYSTEM_PROMPT]
+        }
+
+    suspend fun setSystemPrompt(prompt: String?) {
+        context.dataStore.edit { preferences ->
+            if (prompt != null) {
+                preferences[SYSTEM_PROMPT] = prompt
+            } else {
+                preferences.remove(SYSTEM_PROMPT)
+            }
+        }
+    }
+
+    val selectedModel: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[SELECTED_MODEL] ?: "qwen-2.5-32b"
+        }
+
+    suspend fun setSelectedModel(modelId: String) {
+        context.dataStore.edit { preferences ->
+            preferences[SELECTED_MODEL] = modelId
         }
     }
 } 

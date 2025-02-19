@@ -55,7 +55,8 @@ fun DeveloperRoom(
     var errorMessage by remember { mutableStateOf("") }
     val context = LocalContext.current
     
-    var systemPrompt by remember { mutableStateOf(DEFAULT_SYSTEM_PROMPT) }
+    val currentSystemPrompt by viewModel.systemPrompt.collectAsState()
+    var systemPrompt by remember(currentSystemPrompt) { mutableStateOf(currentSystemPrompt ?: DEFAULT_SYSTEM_PROMPT) }
     var showPromptEditor by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     var showHelpGuide by remember { mutableStateOf(false) }
@@ -217,33 +218,85 @@ fun DeveloperRoom(
 
                     if (isGroqEnabled) {
                         Spacer(modifier = Modifier.height(16.dp))
-                        OutlinedButton(
-                            onClick = { showPromptEditor = true },
-                            modifier = Modifier.fillMaxWidth()
+                        Column {
+                            OutlinedButton(
+                                onClick = { showPromptEditor = true },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Настроить системный промпт")
+                            }
+                            if (currentSystemPrompt != null && currentSystemPrompt != DEFAULT_SYSTEM_PROMPT) {
+                                Text(
+                                    text = "Промпт изменен",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // Переключатель тегов мышления
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top
                         ) {
-                            Icon(
-                                Icons.Default.Edit,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = "Теги мышления",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "Показывать теги <think> в ответах модели",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = viewModel.showThinkingTags.collectAsState().value,
+                                onCheckedChange = { show ->
+                                    viewModel.setShowThinkingTags(show)
+                                }
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Настроить системный промпт")
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
                         
                         // Секция выбора модели
                         Column {
-                            Text(
-                                text = "Модель",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            
                             val models by viewModel.availableGroqModels.collectAsState()
                             val selectedModel by viewModel.selectedGroqModel.collectAsState()
                             val isLoading by viewModel.isLoadingModels.collectAsState()
                             val error by viewModel.modelLoadError.collectAsState()
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Модель",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                if (selectedModel != "qwen-2.5-32b") {
+                                    Text(
+                                        text = "Изменено",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
                             
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -296,7 +349,8 @@ fun DeveloperRoom(
                                         },
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .menuAnchor(),
+                                            .menuAnchor()
+                                            .padding(vertical = 8.dp),
                                         colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
                                     )
                                     
@@ -304,14 +358,37 @@ fun DeveloperRoom(
                                         expanded = expanded,
                                         onDismissRequest = { expanded = false }
                                     ) {
+                                        DropdownMenuItem(
+                                            onClick = {
+                                                viewModel.setSelectedGroqModel("qwen-2.5-32b")
+                                                expanded = false
+                                            },
+                                            text = { 
+                                                Row(
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Text("qwen-2.5-32b")
+                                                    if (selectedModel == "qwen-2.5-32b") {
+                                                        Text(
+                                                            "(по умолчанию)",
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = MaterialTheme.colorScheme.primary
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        )
                                         models.forEach { model ->
-                                            DropdownMenuItem(
-                                                onClick = {
-                                                    viewModel.setSelectedGroqModel(model.id)
-                                                    expanded = false
-                                                },
-                                                text = { Text(model.id) }
-                                            )
+                                            if (model.id != "qwen-2.5-32b") {
+                                                DropdownMenuItem(
+                                                    onClick = {
+                                                        viewModel.setSelectedGroqModel(model.id)
+                                                        expanded = false
+                                                    },
+                                                    text = { Text(model.id) }
+                                                )
+                                            }
                                         }
                                     }
                                 }

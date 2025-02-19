@@ -124,6 +124,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isGroqEnabled = MutableStateFlow(true)
     val isGroqEnabled = _isGroqEnabled.asStateFlow()
 
+    private val _showThinkingTags = MutableStateFlow(false)
+    val showThinkingTags = _showThinkingTags.asStateFlow()
+
     private val _selectedGroqModel = MutableStateFlow("qwen-2.5-32b")
     val selectedGroqModel = _selectedGroqModel.asStateFlow()
 
@@ -184,6 +187,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadFileManagementEnabled()
         loadExportOnlyNew()
         loadLastExportTime()
+        loadShowThinkingTags()
+        loadSystemPrompt()
+        loadSelectedModel()
     }
 
     fun setActivity(activity: Activity) {
@@ -802,6 +808,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setSystemPrompt(prompt: String) {
         _systemPrompt.value = prompt
         GroqTextProcessor.setSystemPrompt(prompt)
+        // Сохраняем настройку
+        viewModelScope.launch {
+            userPreferences.setSystemPrompt(prompt)
+        }
+    }
+
+    private fun loadSystemPrompt() {
+        viewModelScope.launch {
+            userPreferences.systemPrompt.collect { prompt ->
+                _systemPrompt.value = prompt
+                GroqTextProcessor.setSystemPrompt(prompt)
+            }
+        }
     }
 
     fun setFileManagementEnabled(enabled: Boolean) {
@@ -1180,6 +1199,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setSelectedGroqModel(modelId: String) {
         _selectedGroqModel.value = modelId
         GroqTextProcessor.setModel(modelId)
+        // Сохраняем настройку
+        viewModelScope.launch {
+            userPreferences.setSelectedModel(modelId)
+        }
+    }
+
+    private fun loadSelectedModel() {
+        viewModelScope.launch {
+            userPreferences.selectedModel.collect { modelId ->
+                _selectedGroqModel.value = modelId
+                GroqTextProcessor.setModel(modelId)
+            }
+        }
     }
 
     fun loadGroqModels() {
@@ -1231,6 +1263,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             } catch (e: Exception) {
                 _testResult.value = "❌ Ошибка: ${e.message}"
+            }
+        }
+    }
+
+    fun setShowThinkingTags(show: Boolean) {
+        _showThinkingTags.value = show
+        GroqTextProcessor.setShowThinkingTags(show)
+        // Сохраняем настройку
+        viewModelScope.launch {
+            userPreferences.setShowThinkingTags(show)
+        }
+    }
+
+    private fun loadShowThinkingTags() {
+        viewModelScope.launch {
+            userPreferences.showThinkingTags.collect { show ->
+                _showThinkingTags.value = show
+                GroqTextProcessor.setShowThinkingTags(show)
             }
         }
     }

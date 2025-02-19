@@ -8,6 +8,7 @@ object GroqTextProcessor {
     private val repository = GroqRepository(RetrofitClient.groqService)
     private var customSystemPrompt: String? = null
     private var selectedModel: String = "qwen-2.5-32b"
+    private var showThinkingTags: Boolean = false
 
     fun setSystemPrompt(prompt: String?) {
         customSystemPrompt = prompt
@@ -15,6 +16,18 @@ object GroqTextProcessor {
 
     fun setModel(modelId: String) {
         selectedModel = modelId
+    }
+
+    fun setShowThinkingTags(show: Boolean) {
+        showThinkingTags = show
+    }
+
+    private fun processThinkingTags(text: String): String {
+        if (!showThinkingTags) {
+            // Удаляем теги мышления и их содержимое
+            return text.replace(Regex("<think>.*?</think>\\s*", RegexOption.DOT_MATCHES_ALL), "")
+        }
+        return text
     }
 
     suspend fun processText(text: String): Result<String> {
@@ -26,8 +39,9 @@ object GroqTextProcessor {
                     Log.d(TAG, "✅ Получен успешный ответ от API: $response")
                     val result = response.choices.firstOrNull()?.message?.content
                     if (result != null) {
-                        Log.d(TAG, "✨ Извлечен обработанный текст: $result")
-                        Result.success(result)
+                        val processedResult = processThinkingTags(result)
+                        Log.d(TAG, "✨ Извлечен обработанный текст: $processedResult")
+                        Result.success(processedResult)
                     } else {
                         Log.e(TAG, "❌ Пустой ответ от API")
                         Result.failure(Exception("Empty response"))
