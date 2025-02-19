@@ -304,19 +304,6 @@ fun NoteEditor(
     var editorRef by remember { mutableStateOf<EditText?>(null) }
     var isPreviewMode by remember(note.id) { mutableStateOf(note.isPreviewMode) }
     val scrollState = rememberScrollState()
-    
-    // Автоматическая прокрутка к курсору при изменении текста
-    LaunchedEffect(note.content) {
-        editorRef?.let { editor ->
-            val layout = editor.layout
-            if (layout != null) {
-                val line = layout.getLineForOffset(editor.selectionStart)
-                val y = layout.getLineTop(line)
-                scrollState.animateScrollTo(y)
-            }
-        }
-    }
-
     var showMediaDialog by remember { mutableStateOf(false) }
     var showTimeMarkDialog by remember { mutableStateOf(false) }
     var showNotificationsPanel by remember { mutableStateOf(false) }
@@ -328,6 +315,24 @@ fun NoteEditor(
     
     // Отслеживаем изменения в контенте
     var hasUnsavedChanges by remember { mutableStateOf(false) }
+    
+    // Автоматическая прокрутка к курсору при изменении текста
+    LaunchedEffect(note.content) {
+        editorRef?.let { editor ->
+            val layout = editor.layout
+            if (layout != null) {
+                val lineCount = layout.lineCount
+                if (lineCount > 20) { // Проверяем, что у нас больше 3 строк
+                    val currentLine = layout.getLineForOffset(editor.selectionStart)
+                    // Проверяем, что курсор находится в одной из последних 3 строк
+                    if (currentLine >= lineCount - 20) {
+                        val y = layout.getLineTop(currentLine)
+                        scrollState.animateScrollTo(y)
+                    }
+                }
+            }
+        }
+    }
     
     // Сброс флага при смене заметки
     LaunchedEffect(note.id) {
