@@ -16,9 +16,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -30,26 +28,22 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.RemoveCircle
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -74,9 +68,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
@@ -94,20 +91,14 @@ import com.flesiy.Lotus.ui.components.NotesList
 import com.flesiy.Lotus.ui.components.SearchDialog
 import com.flesiy.Lotus.ui.components.TrashScreen
 import com.flesiy.Lotus.ui.theme.LotusTheme
+import com.flesiy.Lotus.ui.theme.classic_dark_secondary
+import com.flesiy.Lotus.ui.theme.classic_dark_secondaryContainer
+import com.flesiy.Lotus.ui.theme.classic_light_secondary
 import com.flesiy.Lotus.viewmodel.MainViewModel
 import com.flesiy.Lotus.viewmodel.ThemeViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.compose.ui.graphics.Color
-import com.flesiy.Lotus.ui.theme.classic_light_secondaryContainer
-import com.flesiy.Lotus.ui.theme.classic_light_onSecondaryContainer
-import com.flesiy.Lotus.ui.theme.classic_light_secondary
-import com.flesiy.Lotus.ui.theme.classic_dark_secondaryContainer
-import com.flesiy.Lotus.ui.theme.classic_dark_onSecondaryContainer
-import com.flesiy.Lotus.ui.theme.classic_dark_secondary
-import androidx.compose.ui.res.painterResource
-import com.flesiy.Lotus.R
 
 class MainActivity : ComponentActivity() {
     private var viewModelInstance: MainViewModel? = null
@@ -584,12 +575,27 @@ fun LotusApp(
                     topBar = {
                         TopAppBar(
                             title = { 
-                                Text(
-                                    "Lotus",
-                                    color = if (useClassicTheme) {
-                                        if (darkTheme) Color.White else Color.Black
-                                    } else MaterialTheme.colorScheme.onSurface
-                                ) 
+                                Row(
+                                    verticalAlignment = Alignment.Bottom,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        "Lotus",
+                                        color = if (useClassicTheme) {
+                                            if (darkTheme) Color.White else Color.Black
+                                        } else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        "Beta v1.0",
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontSize = MaterialTheme.typography.labelSmall.fontSize * 0.9
+                                        ),
+                                        color = if (useClassicTheme) {
+                                            if (darkTheme) Color.White.copy(alpha = 0.5f) else Color.Black.copy(alpha = 0.5f)
+                                        } else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                        modifier = Modifier.offset(y = (-1).dp)
+                                    )
+                                }
                             },
                             navigationIcon = {
                                 IconButton(onClick = {

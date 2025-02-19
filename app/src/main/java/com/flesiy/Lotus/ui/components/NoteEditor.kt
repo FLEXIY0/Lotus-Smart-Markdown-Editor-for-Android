@@ -97,6 +97,7 @@ import android.view.inputmethod.InputMethodManager
 import android.content.Context
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
+import android.widget.Toast
 
 private const val TAG = "NoteEditor"
 
@@ -633,6 +634,39 @@ fun NoteEditor(
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_notification),
                                     contentDescription = "Уведомления",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        if (isPreviewMode) {
+                            val context = LocalContext.current
+                            IconButton(
+                                onClick = {
+                                    // Функция для очистки текста от markdown-разметки
+                                    val cleanText = note.content
+                                        .replace(Regex("!\\[.*?\\]\\(.*?\\)"), "") // Удаляем изображения
+                                        .replace(Regex("\\[(.*?)\\]\\(.*?\\)")) { matchResult -> 
+                                            matchResult.groupValues[1] // Оставляем только текст ссылки
+                                        } // Заменяем ссылки на текст
+                                        .replace(Regex("[*_~`\\[\\]]+"), "") // Удаляем символы форматирования и квадратные скобки
+                                        .replace(Regex("^#+\\s*", RegexOption.MULTILINE), "") // Удаляем заголовки
+                                        .replace(Regex("^[*+]\\s+", RegexOption.MULTILINE), "") // Удаляем маркеры списков, кроме дефиса
+                                        .replace(Regex("^\\d+\\.\\s+", RegexOption.MULTILINE), "") // Удаляем нумерацию списков
+                                        .replace(Regex("^>\\s*", RegexOption.MULTILINE), "") // Удаляем цитаты
+                                        .replace(Regex("\\n{3,}"), "\n\n") // Заменяем множественные переносы строк на двойной
+                                        .trim()
+
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                    val clip = android.content.ClipData.newPlainText("Текст заметки", cleanText)
+                                    clipboard.setPrimaryClip(clip)
+                                    
+                                    Toast.makeText(context, "Текст скопирован", Toast.LENGTH_SHORT).show()
+                                }
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.content_copy_24px),
+                                    contentDescription = "Копировать текст без разметки",
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
