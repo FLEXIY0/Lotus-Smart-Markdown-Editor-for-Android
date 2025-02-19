@@ -66,6 +66,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -92,6 +95,8 @@ import com.flesiy.Lotus.utils.FileUtils
 import com.flesiy.Lotus.viewmodel.MainViewModel
 import android.view.inputmethod.InputMethodManager
 import android.content.Context
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 
 private const val TAG = "NoteEditor"
 
@@ -299,6 +304,19 @@ fun NoteEditor(
     var editorRef by remember { mutableStateOf<EditText?>(null) }
     var isPreviewMode by remember(note.id) { mutableStateOf(note.isPreviewMode) }
     val scrollState = rememberScrollState()
+    
+    // Автоматическая прокрутка к курсору при изменении текста
+    LaunchedEffect(note.content) {
+        editorRef?.let { editor ->
+            val layout = editor.layout
+            if (layout != null) {
+                val line = layout.getLineForOffset(editor.selectionStart)
+                val y = layout.getLineTop(line)
+                scrollState.animateScrollTo(y)
+            }
+        }
+    }
+
     var showMediaDialog by remember { mutableStateOf(false) }
     var showTimeMarkDialog by remember { mutableStateOf(false) }
     var showNotificationsPanel by remember { mutableStateOf(false) }
@@ -378,6 +396,10 @@ fun NoteEditor(
             onContentChange(newText)
         }
     }
+
+    val windowInsets = WindowInsets.ime
+    val imeHeight = with(LocalDensity.current) { windowInsets.getBottom(LocalDensity.current).toDp() }
+    val bottomPadding = if (imeHeight > 0.dp) imeHeight else 0.dp
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -672,6 +694,7 @@ fun NoteEditor(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .padding(bottom = bottomPadding)
         ) {
             Column(
                 modifier = Modifier
@@ -699,7 +722,8 @@ fun NoteEditor(
                     modifier = Modifier
                         .fillMaxWidth()
                         .defaultMinSize(minHeight = 400.dp)
-                        .padding(horizontal = 16.dp)
+
+                        .padding(bottom = 10.dp)
                 ) {
                     AnimatedMarkdownContent(
                         content = note.content,
