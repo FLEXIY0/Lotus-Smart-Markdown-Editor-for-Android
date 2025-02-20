@@ -99,6 +99,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import android.widget.Toast
 import androidx.compose.material3.TextField
+import kotlinx.coroutines.delay
+import androidx.compose.material3.Divider
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 private const val TAG = "NoteEditor"
 
@@ -311,6 +314,7 @@ fun NoteEditor(
     var showNotificationsPanel by remember { mutableStateOf(false) }
     var showNotificationDialog by remember { mutableStateOf(false) }
     var selectedNotification by remember { mutableStateOf<NoteNotification?>(null) }
+    var showExtendedMetadata by remember { mutableStateOf(false) }
     
     val notificationViewModel: NotificationViewModel = viewModel()
     val notifications by notificationViewModel.notifications.collectAsState()
@@ -418,7 +422,9 @@ fun NoteEditor(
         topBar = {
             Surface(
                 tonalElevation = 3.dp,
-                shadowElevation = 3.dp
+                shadowElevation = 3.dp,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -427,7 +433,8 @@ fun NoteEditor(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .clickable { showExtendedMetadata = !showExtendedMetadata },
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -441,11 +448,37 @@ fun NoteEditor(
                         )
 
                         Row(
-                            horizontalArrangement = Arrangement.End,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "${note.content.split(Regex("\\s+")).count()} слов",
+                                text = "${note.content.lines().size} стр.",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontFamily = FontFamily.Default,
+                                    fontWeight = FontWeight.Light
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                text = "${
+                                    note.content
+                                        .replace(Regex("!\\[.*?\\]\\(.*?\\)"), "") // Удаляем изображения
+                                        .replace(Regex("\\[(.*?)\\]\\(.*?\\)"), "$1") // Оставляем только текст ссылок
+                                        .replace(Regex("[*_~`#>\\[\\]\\-\\d.]"), "") // Удаляем markdown символы
+                                        .replace(Regex("\\s+"), " ") // Заменяем все пробельные символы на один пробел
+                                        .trim()
+                                        .split(" ")
+                                        .filter { it.isNotEmpty() }
+                                        .size
+                                } сл.",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontFamily = FontFamily.Default,
+                                    fontWeight = FontWeight.Light
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                text = "${note.content.length} сим.",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontFamily = FontFamily.Default,
                                     fontWeight = FontWeight.Light
@@ -455,15 +488,141 @@ fun NoteEditor(
                         }
                     }
 
-                    Text(
-                        text = "Изменено: ${formatDate(note.modifiedAt)} • Создано: ${formatDate(note.createdAt)}",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = FontFamily.Default,
-                            fontWeight = FontWeight.Light
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
+                    AnimatedVisibility(
+                        visible = showExtendedMetadata,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            // Основные метаданные
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Изменено: ${formatDate(note.modifiedAt)}",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontFamily = FontFamily.Default,
+                                        fontWeight = FontWeight.Light
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
+                                Text(
+                                    text = "Создано: ${formatDate(note.createdAt)}",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontFamily = FontFamily.Default,
+                                        fontWeight = FontWeight.Light
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
+                            }
+
+                            Divider(
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)
+                            )
+
+                            // Статистика заметки
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Абзацев: ${note.content.split("\n\n").size}",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontFamily = FontFamily.Default,
+                                            fontWeight = FontWeight.Light
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                    Text(
+                                        text = "Чекбоксов: ${note.content.split("\n").count { it.trim().startsWith("- [ ]") || it.trim().startsWith("- [x]") }}",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontFamily = FontFamily.Default,
+                                            fontWeight = FontWeight.Light
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = "Заголовков: ${note.content.split("\n").count { it.trim().startsWith("#") }}",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontFamily = FontFamily.Default,
+                                            fontWeight = FontWeight.Light
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                    Text(
+                                        text = "Ссылок: ${note.content.split("\n").sumOf { line -> 
+                                            Regex("\\[.*?\\]\\(.*?\\)").findAll(line).count()
+                                        }}",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontFamily = FontFamily.Default,
+                                            fontWeight = FontWeight.Light
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                }
+                            }
+
+                            Divider(
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)
+                            )
+
+                            // Системная информация
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "ID: ${note.id}",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontFamily = FontFamily.Default,
+                                            fontWeight = FontWeight.Light
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                    Text(
+                                        text = "Версий: ${versions.count { it.noteId == note.id }}",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontFamily = FontFamily.Default,
+                                            fontWeight = FontWeight.Light
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = if (note.isPinned) "Закреплено" else "Не закреплено",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontFamily = FontFamily.Default,
+                                            fontWeight = FontWeight.Light
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                    Text(
+                                        text = "Уведомлений: ${notifications.count { it.noteId == note.id }}",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontFamily = FontFamily.Default,
+                                            fontWeight = FontWeight.Light
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                }
+                            }
+                        }
+                    }
 
                     AnimatedVisibility(
                         visible = isVersionHistoryVisible && isPreviewMode,
@@ -485,19 +644,27 @@ fun NoteEditor(
         bottomBar = {
             Surface(
                 tonalElevation = 3.dp,
-                shadowElevation = 3.dp
+                shadowElevation = 3.dp,
+                shape = RoundedCornerShape(
+                    topStart = 28.dp,
+                    topEnd = 28.dp,
+                    bottomStart = 0.dp,
+                    bottomEnd = 0.dp
+                ),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp)
+                        .height(48.dp)
                         .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
                     ) {
                         if (!isPreviewMode) {
                             IconButton(
@@ -715,6 +882,7 @@ fun NoteEditor(
                     Button(
                         onClick = handleSave,
                         enabled = hasUnsavedChanges,
+                        modifier = Modifier.height(36.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (hasUnsavedChanges) 
                                 MaterialTheme.colorScheme.primary 
@@ -731,7 +899,8 @@ fun NoteEditor(
                             color = if (hasUnsavedChanges)
                                 MaterialTheme.colorScheme.onPrimary
                             else
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                                MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelLarge
                         )
                     }
                 }
@@ -897,6 +1066,14 @@ fun NoteEditor(
             },
             noteId = note.id
         )
+    }
+
+    // Автоматическое скрытие расширенных метаданных через 2 секунды
+    LaunchedEffect(showExtendedMetadata) {
+        if (showExtendedMetadata) {
+            delay(10000)
+            showExtendedMetadata = false
+        }
     }
 }
 
