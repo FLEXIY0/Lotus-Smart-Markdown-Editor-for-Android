@@ -151,6 +151,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _fontSize = MutableStateFlow(16f)
     val fontSize = _fontSize.asStateFlow()
 
+    private val _textAlpha = MutableStateFlow(1f)
+    val textAlpha = _textAlpha.asStateFlow()
+
     private val _exportOnlyNew = MutableStateFlow(false)
     val exportOnlyNew = _exportOnlyNew.asStateFlow()
 
@@ -184,6 +187,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         speechRecognitionManager = SpeechRecognitionManager(getApplication())
         loadTodoEnabled()
         loadFontSize()
+        loadTextAlpha()
         loadFileManagementEnabled()
         loadExportOnlyNew()
         loadLastExportTime()
@@ -987,10 +991,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun loadTextAlpha() {
+        viewModelScope.launch {
+            userPreferences.textAlpha.collect { alpha ->
+                _textAlpha.value = alpha
+            }
+        }
+    }
+
     fun setFontSize(size: Float) {
         viewModelScope.launch {
             userPreferences.setFontSize(size)
             _fontSize.value = size
+        }
+    }
+
+    fun setTextAlpha(alpha: Float) {
+        viewModelScope.launch {
+            // Округляем до фиксированных значений (шаг 0.1)
+            val roundedAlpha = ((alpha * 10).toInt() / 10f).coerceIn(0.3f, 1f)
+            userPreferences.setTextAlpha(roundedAlpha)
+            _textAlpha.value = roundedAlpha
         }
     }
 

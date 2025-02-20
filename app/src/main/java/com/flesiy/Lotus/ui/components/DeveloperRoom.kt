@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.material3.Slider
 
 private const val DEFAULT_SYSTEM_PROMPT = """When a user sends you a message:
 
@@ -603,6 +604,61 @@ fun DeveloperRoom(
                             onCheckedChange = { enabled ->
                                 themeViewModel.setUseClassicTheme(enabled)
                             }
+                        )
+                    }
+                }
+            }
+
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Настройки текста",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        val currentAlpha = viewModel.textAlpha.collectAsState().value
+                        // Округляем до ближайшего десятка процентов
+                        val displayAlpha = (currentAlpha * 100).toInt().let { 
+                            ((it + 5) / 10) * 10 
+                        }
+                        
+                        Text(
+                            text = "Прозрачность текста: ${displayAlpha}%",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "Настройка прозрачности текста в режиме предпросмотра",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Slider(
+                            value = currentAlpha,
+                            onValueChange = { 
+                                // Округляем до фиксированных значений
+                                val newValue = ((it * 10).toInt() / 10f)
+                                viewModel.setTextAlpha(newValue)
+                            },
+                            valueRange = 0.3f..1f,
+                            steps = 6 // 7 значений: 30%, 40%, 50%, 60%, 70%, 80%, 90%, 100%
                         )
                     }
                 }

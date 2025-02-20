@@ -452,7 +452,7 @@ fun LotusApp(
                                                 label = { Text("Отправка") },
                                                 leadingIcon = {
                                                     Icon(
-                                                        Icons.Default.Share,
+                                                        painter = painterResource(id = R.drawable.share_24px),
                                                         contentDescription = null,
                                                         modifier = Modifier.size(16.dp)
                                                     )

@@ -34,6 +34,7 @@ import io.noties.markwon.AbstractMarkwonPlugin
 import java.util.regex.Pattern
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModelProvider
 import com.flesiy.Lotus.viewmodel.MainViewModel
 
@@ -216,6 +217,11 @@ fun MarkdownPreview(
 ) {
     val context = LocalContext.current
     val markwon = remember { createMarkwon(context) }
+    val textColor = MaterialTheme.colorScheme.onSurface
+    val viewModel = context.findActivity()?.let { ViewModelProvider(it)[MainViewModel::class.java] }
+    val rawAlpha = viewModel?.textAlpha?.collectAsState()?.value ?: 1f
+    // Округляем до фиксированных значений (шаг 0.1)
+    val textAlpha = ((rawAlpha * 10).toInt() / 10f).coerceIn(0.3f, 1f)
 
     Box(modifier = modifier) {
         AndroidView(
@@ -224,11 +230,13 @@ fun MarkdownPreview(
                 createPreviewTextView(ctx, fontSize).apply {
                     movementMethod = CheckboxClickHandler(content, onContentChange)
                     markwon.setMarkdown(this, content)
+                    setTextColor(textColor.copy(alpha = textAlpha).toArgb())
                 }
             },
             update = { textView ->
                 textView.textSize = fontSize
                 textView.movementMethod = CheckboxClickHandler(content, onContentChange)
+                textView.setTextColor(textColor.copy(alpha = textAlpha).toArgb())
                 markwon.setMarkdown(textView, content)
             }
         )
@@ -238,7 +246,7 @@ fun MarkdownPreview(
 private fun createPreviewTextView(context: Context, fontSize: Float): TextView {
     return TextView(context).apply {
         textSize = fontSize
-        setPadding(30, 16, 16, 16)
+        setPadding(45, 40, 16, 16)
         setTextIsSelectable(true)
         gravity = android.view.Gravity.TOP
     }

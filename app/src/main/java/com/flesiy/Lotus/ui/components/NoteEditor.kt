@@ -424,7 +424,7 @@ fun NoteEditor(
                 tonalElevation = 3.dp,
                 shadowElevation = 3.dp,
                 shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 0.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -645,18 +645,15 @@ fun NoteEditor(
             Surface(
                 tonalElevation = 3.dp,
                 shadowElevation = 3.dp,
-                shape = RoundedCornerShape(
-                    topStart = 28.dp,
-                    topEnd = 28.dp,
-                    bottomStart = 0.dp,
-                    bottomEnd = 0.dp
-                ),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 20.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
+                        .height(56.dp)
                         .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically

@@ -22,6 +22,7 @@ class UserPreferences(private val context: Context) {
     private val showThinkingTagsKey = booleanPreferencesKey("show_thinking_tags")
     private val SYSTEM_PROMPT = stringPreferencesKey("system_prompt")
     private val SELECTED_MODEL = stringPreferencesKey("selected_model")
+    private val TEXT_ALPHA = floatPreferencesKey("text_alpha")
 
     val skipDeleteConfirmation: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
@@ -161,9 +162,20 @@ class UserPreferences(private val context: Context) {
             preferences[SELECTED_MODEL] ?: "qwen-2.5-32b"
         }
 
+    val textAlpha: Flow<Float> = context.dataStore.data
+        .map { preferences ->
+            preferences[TEXT_ALPHA] ?: 1f
+        }
+
     suspend fun setSelectedModel(modelId: String) {
         context.dataStore.edit { preferences ->
             preferences[SELECTED_MODEL] = modelId
+        }
+    }
+
+    suspend fun setTextAlpha(alpha: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[TEXT_ALPHA] = alpha
         }
     }
 } 
