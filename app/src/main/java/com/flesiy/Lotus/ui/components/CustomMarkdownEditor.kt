@@ -268,6 +268,7 @@ private fun createEditor(
         background = null
         hint?.let { this.hint = it }
         gravity = android.view.Gravity.TOP
+        setPadding(45, 40, 16, 16)
 
         // Расширенная настройка Markwon
         val markwon = Markwon.builder(context)
@@ -304,7 +305,7 @@ private fun createEditor(
         }
 
         // Настройка внешнего вида и поведения
-        setPadding(16, 16, 16, 16)
+        setPadding(45, 40, 16, 16)
         setTextIsSelectable(true)
         isFocusable = true
         isFocusableInTouchMode = true
