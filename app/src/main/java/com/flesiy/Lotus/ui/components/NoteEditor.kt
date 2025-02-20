@@ -303,7 +303,9 @@ fun NoteEditor(
     modifier: Modifier = Modifier,
     fontSize: Float = 16f,
     versions: List<NoteVersion> = emptyList(),
-    viewModel: MainViewModel
+    viewModel: MainViewModel,
+    useClassicTheme: Boolean = false,
+    darkTheme: Boolean = false
 ) {
     val context = LocalContext.current
     var editorRef by remember { mutableStateOf<EditText?>(null) }
@@ -419,6 +421,9 @@ fun NoteEditor(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        containerColor = if (useClassicTheme) {
+            if (darkTheme) Color.Black else Color.White
+        } else MaterialTheme.colorScheme.background,
         topBar = {
             Surface(
                 tonalElevation = 3.dp,
@@ -644,7 +649,7 @@ fun NoteEditor(
         bottomBar = {
             Surface(
                 tonalElevation = 3.dp,
-                shadowElevation = 3.dp,
+                shadowElevation = 0.dp,
                 shape = RoundedCornerShape(28.dp),
                 modifier = Modifier
                     .fillMaxWidth()

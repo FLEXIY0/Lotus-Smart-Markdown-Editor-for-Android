@@ -382,90 +382,157 @@ fun LotusApp(
                         // Пункт импорта/экспорта
                         if (viewModel.isFileManagementEnabled.collectAsState().value) {
                             Divider(modifier = Modifier.padding(vertical = 8.dp))
+                            Surface(
+                                color = if (darkTheme) Color.Black else Color.White,
+                                shape = MaterialTheme.shapes.medium,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            ) {
+                                ListItem(
+                                    headlineContent = { Text("Загрузка и отправка") },
+                                    supportingContent = {
+                                        Column {
+                                            Text(
+                                                text = "Экспорт, импорт и отправка заметок",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Row(
+                                                modifier = Modifier.padding(top = 4.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                val context = LocalContext.current
+                                                val exportDirectory by viewModel.exportDirectory.collectAsState(initial = null)
+
+                                                AssistChip(
+                                                    onClick = { 
+                                                        exportDirectory?.let { dir ->
+                                                            try {
+                                                                val intent = Intent(Intent.ACTION_VIEW)
+                                                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                                                    val uri = Uri.parse("content://com.android.externalstorage.documents/document/primary:${dir.absolutePath.substringAfter("/storage/emulated/0/")}")
+                                                                    intent.setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
+                                                                } else {
+                                                                    val uri = Uri.fromFile(dir)
+                                                                    intent.setDataAndType(uri, "resource/folder")
+                                                                }
+                                                                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                                context.startActivity(intent)
+                                                            } catch (e: Exception) {
+                                                                Log.e("FileManagement", "Ошибка при открытии директории", e)
+                                                            }
+                                                        }
+                                                    },
+                                                    label = { Text("Хранилище") },
+                                                    leadingIcon = {
+                                                        Icon(
+                                                            Icons.Default.FolderOpen,
+                                                            contentDescription = null,
+                                                            modifier = Modifier.size(16.dp)
+                                                        )
+                                                    },
+                                                    enabled = exportDirectory != null
+                                                )
+                                            }
+                                        }
+                                    },
+                                    leadingContent = {
+                                        Icon(
+                                            Icons.Default.SwapHoriz,
+                                            contentDescription = "Загрузка и отправка",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    },
+                                    modifier = Modifier.clickable {
+                                        scope.launch {
+                                            drawerState.close()
+                                        }
+                                        navigateSafely("file_management")
+                                    }
+                                )
+                            }
+                        }
+                        
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+                        
+                        // Кнопка корзины
+                        Surface(
+                            color = if (darkTheme) Color.Black else Color.White,
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        ) {
                             ListItem(
-                                headlineContent = { Text("Загрузка и отправка") },
+                                headlineContent = { Text("Корзина") },
+                                leadingContent = {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Корзина",
+                                        tint = if (isTrashOverLimit) MaterialTheme.colorScheme.error 
+                                              else MaterialTheme.colorScheme.primary
+                                    )
+                                },
+                                trailingContent = if (trashSize > 0) {
+                                    {
+                                        Text(
+                                            text = when {
+                                                trashSize < 1024 -> "$trashSize B"
+                                                trashSize < 1024 * 1024 -> String.format("%.1f KB", trashSize / 1024.0)
+                                                else -> String.format("%.1f MB", trashSize / (1024.0 * 1024.0))
+                                            },
+                                            color = if (isTrashOverLimit) MaterialTheme.colorScheme.error 
+                                                   else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                } else null,
+                                modifier = Modifier.clickable {
+                                    scope.launch {
+                                        drawerState.close()
+                                    }
+                                    navigateSafely("trash")
+                                }
+                            )
+                        }
+                        
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+                        
+                        // Информация о ресурсах
+                        Surface(
+                            color = if (darkTheme) Color.Black else Color.White,
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        ) {
+                            ListItem(
+                                headlineContent = { 
+                                    Text(
+                                        "Использование памяти",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                },
                                 supportingContent = {
                                     Column {
+                                        val notesSize = viewModel.totalNotesSize.collectAsState().value
+                                        val memoryUsage = viewModel.appMemoryUsage.collectAsState().value
                                         Text(
-                                            text = "Экспорт, импорт и отправка заметок",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            text = "Заметки: " + when {
+                                                notesSize < 1024 -> "$notesSize B"
+                                                notesSize < 1024 * 1024 -> String.format("%.1f KB", notesSize / 1024.0)
+                                                else -> String.format("%.1f MB", notesSize / (1024.0 * 1024.0))
+                                            },
+                                            style = MaterialTheme.typography.bodySmall
                                         )
-                                        Row(
-                                            modifier = Modifier.padding(top = 4.dp),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            val context = LocalContext.current
-                                            val exportDirectory by viewModel.exportDirectory.collectAsState(initial = null)
-                                            val lastViewedFile by viewModel.lastViewedNoteFile.collectAsState(initial = null)
-
-                                            AssistChip(
-                                                onClick = { 
-                                                    exportDirectory?.let { dir ->
-                                                        try {
-                                                            val intent = Intent(Intent.ACTION_VIEW)
-                                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                                                val uri = Uri.parse("content://com.android.externalstorage.documents/document/primary:${dir.absolutePath.substringAfter("/storage/emulated/0/")}")
-                                                                intent.setDataAndType(uri, DocumentsContract.Document.MIME_TYPE_DIR)
-                                                            } else {
-                                                                val uri = Uri.fromFile(dir)
-                                                                intent.setDataAndType(uri, "resource/folder")
-                                                            }
-                                                            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                            context.startActivity(intent)
-                                                        } catch (e: Exception) {
-                                                            Log.e("FileManagement", "Ошибка при открытии директории", e)
-                                                        }
-                                                    }
-                                                },
-                                                label = { Text("Хранилище") },
-                                                leadingIcon = {
-                                                    Icon(
-                                                        Icons.Default.FolderOpen,
-                                                        contentDescription = null,
-                                                        modifier = Modifier.size(16.dp)
-                                                    )
-                                                },
-                                                enabled = exportDirectory != null
-                                            )
-                                            AssistChip(
-                                                onClick = { 
-                                                    lastViewedFile?.let { file ->
-                                                        val noteId = file.nameWithoutExtension.toLong()
-                                                        val shareFile = viewModel.prepareNoteForSharing(noteId)
-                                                        if (shareFile != null) {
-                                                            val intent = Intent(Intent.ACTION_SEND)
-                                                            intent.type = "text/markdown"
-                                                            intent.putExtra(
-                                                                Intent.EXTRA_STREAM,
-                                                                FileProvider.getUriForFile(
-                                                                    context,
-                                                                    "${context.packageName}.provider",
-                                                                    shareFile
-                                                                )
-                                                            )
-                                                            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                            context.startActivity(Intent.createChooser(intent, "Отправить заметку"))
-                                                        }
-                                                    }
-                                                },
-                                                label = { Text("Отправка") },
-                                                leadingIcon = {
-                                                    Icon(
-                                                        painter = painterResource(id = R.drawable.share_24px),
-                                                        contentDescription = null,
-                                                        modifier = Modifier.size(16.dp)
-                                                    )
-                                                },
-                                                enabled = lastViewedFile != null
-                                            )
-                                        }
+                                        Text(
+                                            text = "ОЗУ: " + when {
+                                                memoryUsage < 1024 -> "$memoryUsage B"
+                                                memoryUsage < 1024 * 1024 -> String.format("%.1f KB", memoryUsage / 1024.0)
+                                                else -> String.format("%.1f MB", memoryUsage / (1024.0 * 1024.0))
+                                            },
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
                                     }
                                 },
                                 leadingContent = {
                                     Icon(
-                                        Icons.Default.SwapHoriz,
-                                        contentDescription = "Загрузка и отправка",
+                                        Icons.Default.Memory,
+                                        contentDescription = "Использование памяти",
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 },
@@ -473,91 +540,10 @@ fun LotusApp(
                                     scope.launch {
                                         drawerState.close()
                                     }
-                                    navigateSafely("file_management")
+                                    navigateSafely("developer")
                                 }
                             )
                         }
-                        
-                        Divider(modifier = Modifier.padding(vertical = 8.dp))
-                        
-                        // Кнопка корзины
-                        ListItem(
-                            headlineContent = { Text("Корзина") },
-                            leadingContent = {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = "Корзина",
-                                    tint = if (isTrashOverLimit) MaterialTheme.colorScheme.error 
-                                          else MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            trailingContent = if (trashSize > 0) {
-                                {
-                                    Text(
-                                        text = when {
-                                            trashSize < 1024 -> "$trashSize B"
-                                            trashSize < 1024 * 1024 -> String.format("%.1f KB", trashSize / 1024.0)
-                                            else -> String.format("%.1f MB", trashSize / (1024.0 * 1024.0))
-                                        },
-                                        color = if (isTrashOverLimit) MaterialTheme.colorScheme.error 
-                                               else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            } else null,
-                            modifier = Modifier.clickable {
-                                scope.launch {
-                                    drawerState.close()
-                                }
-                                navigateSafely("trash")
-                            }
-                        )
-                        
-                        Divider(modifier = Modifier.padding(vertical = 8.dp))
-                        
-                        // Информация о ресурсах
-                        ListItem(
-                            headlineContent = { 
-                                Text(
-                                    "Использование памяти",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            },
-                            supportingContent = {
-                                Column {
-                                    val notesSize = viewModel.totalNotesSize.collectAsState().value
-                                    val memoryUsage = viewModel.appMemoryUsage.collectAsState().value
-                                    Text(
-                                        text = "Заметки: " + when {
-                                            notesSize < 1024 -> "$notesSize B"
-                                            notesSize < 1024 * 1024 -> String.format("%.1f KB", notesSize / 1024.0)
-                                            else -> String.format("%.1f MB", notesSize / (1024.0 * 1024.0))
-                                        },
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                    Text(
-                                        text = "ОЗУ: " + when {
-                                            memoryUsage < 1024 -> "$memoryUsage B"
-                                            memoryUsage < 1024 * 1024 -> String.format("%.1f KB", memoryUsage / 1024.0)
-                                            else -> String.format("%.1f MB", memoryUsage / (1024.0 * 1024.0))
-                                        },
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                            },
-                            leadingContent = {
-                                Icon(
-                                    Icons.Default.Memory,
-                                    contentDescription = "Использование памяти",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            modifier = Modifier.clickable {
-                                scope.launch {
-                                    drawerState.close()
-                                }
-                                navigateSafely("developer")
-                            }
-                        )
                     }
                 }
             }
@@ -743,7 +729,9 @@ fun LotusApp(
                         modifier = Modifier.padding(padding),
                         fontSize = fontSize,
                         versions = versions,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        useClassicTheme = useClassicTheme,
+                        darkTheme = darkTheme
                     )
                 }
             }
