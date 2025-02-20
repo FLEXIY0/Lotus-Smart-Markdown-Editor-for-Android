@@ -17,6 +17,7 @@ import com.flesiy.Lotus.R
 import com.flesiy.Lotus.viewmodel.NoteNotification
 import com.flesiy.Lotus.data.RepeatInterval
 import java.time.format.DateTimeFormatter
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun NotificationsPanel(
@@ -42,7 +43,8 @@ fun NotificationsPanel(
         ) {
             Text(
                 "Уведомления",
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.White
             )
             
             FilledTonalButton(
@@ -72,17 +74,17 @@ fun NotificationsPanel(
                     modifier = Modifier
                         .size(48.dp)
                         .padding(bottom = 8.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    tint = Color.White.copy(alpha = 0.5f)
                 )
                 Text(
                     "Нет активных уведомлений",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.White
                 )
                 Text(
                     "Нажмите «Добавить», чтобы создать новое уведомление",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    color = Color.White.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 4.dp)
                 )
