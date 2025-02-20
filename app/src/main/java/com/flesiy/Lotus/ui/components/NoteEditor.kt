@@ -668,6 +668,14 @@ fun NoteEditor(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
+                        PreviewToggleButton(
+                            isPreviewMode = isPreviewMode,
+                            onToggle = { 
+                                isPreviewMode = !isPreviewMode
+                                onPreviewModeChange(isPreviewMode)
+                            }
+                        )
+
                         if (!isPreviewMode) {
                             IconButton(
                                 onClick = onStartRecording,
@@ -709,14 +717,6 @@ fun NoteEditor(
                                 }
                             }
                         }
-                        
-                        PreviewToggleButton(
-                            isPreviewMode = isPreviewMode,
-                            onToggle = { 
-                                isPreviewMode = !isPreviewMode
-                                onPreviewModeChange(isPreviewMode)
-                            }
-                        )
 
                         if (!isPreviewMode) {
                             IconButton(onClick = { showMediaDialog = true }) {
