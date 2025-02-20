@@ -238,7 +238,7 @@ fun MarkdownPreview(
 private fun createPreviewTextView(context: Context, fontSize: Float): TextView {
     return TextView(context).apply {
         textSize = fontSize
-        setPadding(40, 16, 20, 16)
+        setPadding(40, 16, 26, 16)
         setTextIsSelectable(true)
         gravity = android.view.Gravity.TOP
     }

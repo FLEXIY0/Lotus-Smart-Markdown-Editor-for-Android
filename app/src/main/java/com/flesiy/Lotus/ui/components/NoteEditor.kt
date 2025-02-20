@@ -323,10 +323,10 @@ fun NoteEditor(
             val layout = editor.layout
             if (layout != null) {
                 val lineCount = layout.lineCount
-                if (lineCount > 20) { // Проверяем, что у нас больше 3 строк
+                if (lineCount > 1) { // Проверяем, что у нас больше 3 строк
                     val currentLine = layout.getLineForOffset(editor.selectionStart)
                     // Проверяем, что курсор находится в одной из последних 3 строк
-                    if (currentLine >= lineCount - 20) {
+                    if (currentLine >= lineCount - 1) {
                         val y = layout.getLineTop(currentLine)
                         scrollState.animateScrollTo(y)
                     }
