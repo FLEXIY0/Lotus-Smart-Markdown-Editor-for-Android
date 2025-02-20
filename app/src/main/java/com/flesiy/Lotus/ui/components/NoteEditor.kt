@@ -319,14 +319,19 @@ fun NoteEditor(
     
     // Автоматическая прокрутка к курсору при изменении текста
     LaunchedEffect(note.content) {
+        // Пропускаем автоскролл если это операция с чекбоксом
+        if (note.content.endsWith("- [ ] ") || note.content.contains("\n- [ ] $")) {
+            return@LaunchedEffect
+        }
+        
         editorRef?.let { editor ->
             val layout = editor.layout
             if (layout != null) {
                 val lineCount = layout.lineCount
-                if (lineCount > 1) { // Проверяем, что у нас больше 3 строк
+                if (lineCount > 20) { // Проверяем, что у нас больше 20 строк
                     val currentLine = layout.getLineForOffset(editor.selectionStart)
-                    // Проверяем, что курсор находится в одной из последних 3 строк
-                    if (currentLine >= lineCount - 1) {
+                    // Проверяем, что курсор находится в одной из последних строк
+                    if (currentLine >= lineCount - 20) {
                         val y = layout.getLineTop(currentLine)
                         scrollState.animateScrollTo(y)
                     }
@@ -595,22 +600,22 @@ fun NoteEditor(
                                             }
                                             
                                             Log.d(TAG, "📄 Новый текст: '$newText'")
-                                            onContentChange(newText)
                                             
-                                            // Устанавливаем курсор после чекбокса с учетом возможного переноса строки
+                                            // Вычисляем новую позицию курсора
                                             val newCursorPosition = safePosition + checkboxText.length + (if (needsNewLine) 1 else 0)
                                             Log.d(TAG, "📍 Новая позиция курсора: $newCursorPosition")
                                             
-                                            editor.post {
-                                                try {
-                                                    // Проверяем длину текста перед установкой курсора
-                                                    val finalPosition = newCursorPosition.coerceIn(0, editor.length())
-                                                    editor.setSelection(finalPosition)
-                                                    Log.d(TAG, "✅ Курсор успешно установлен в позицию $finalPosition")
-                                                } catch (e: Exception) {
-                                                    Log.e(TAG, "❌ Ошибка при установке курсора: ${e.message}")
-                                                }
-                                            }
+                                            // Устанавливаем текст напрямую в EditText
+                                            editor.setText(newText)
+                                            
+                                            // Сразу устанавливаем позицию курсора
+                                            val finalPosition = newCursorPosition.coerceIn(0, editor.length())
+                                            editor.setSelection(finalPosition)
+                                            
+                                            // Только после этого уведомляем об изменении контента
+                                            onContentChange(newText)
+                                            
+                                            Log.d(TAG, "✅ Курсор успешно установлен в позицию $finalPosition")
                                         } catch (e: Exception) {
                                             Log.e(TAG, "❌ Ошибка при добавлении чекбокса: ${e.message}")
                                         }
