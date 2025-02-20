@@ -608,7 +608,7 @@ fun LotusApp(
                                     }
                                 }) {
                                     Icon(
-                                        Icons.Default.Menu,
+                                        painter = painterResource(id = R.drawable.menu_24px),
                                         contentDescription = "Меню",
                                         tint = if (useClassicTheme) {
                                             if (darkTheme) Color.White else Color.Black
@@ -619,7 +619,7 @@ fun LotusApp(
                             actions = {
                                 IconButton(onClick = { showFontSizeDialog = true }) {
                                     Icon(
-                                        Icons.Default.FormatSize,
+                                        painter = painterResource(id = R.drawable.format_size_24px),
                                         contentDescription = "Размер шрифта",
                                         tint = if (useClassicTheme) {
                                             if (darkTheme) classic_dark_secondary else classic_light_secondary
@@ -628,7 +628,7 @@ fun LotusApp(
                                 }
                                 IconButton(onClick = { showSearchDialog = true }) {
                                     Icon(
-                                        Icons.Default.Search,
+                                        painter = painterResource(id = R.drawable.search_24px),
                                         contentDescription = "Поиск",
                                         tint = if (useClassicTheme) {
                                             if (darkTheme) classic_dark_secondary else classic_light_secondary
@@ -641,7 +641,7 @@ fun LotusApp(
                                         modifier = Modifier.size(48.dp)
                                     ) {
                                         Icon(
-                                            Icons.Default.History,
+                                            painter = painterResource(id = R.drawable.history_24px),
                                             contentDescription = "История версий",
                                             tint = if (useClassicTheme) {
                                                 if (darkTheme) classic_dark_secondary else classic_light_secondary
@@ -663,7 +663,7 @@ fun LotusApp(
                                     modifier = Modifier.size(48.dp)
                                 ) {
                                     Icon(
-                                        Icons.Default.Clear,
+                                        painter = painterResource(id = R.drawable.clear_24px),
                                         contentDescription = "Удалить заметку",
                                         modifier = Modifier.size(20.dp),
                                         tint = if (useClassicTheme) {

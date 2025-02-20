@@ -17,7 +17,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.flesiy.Lotus.R
 
 @Composable
 fun PreviewToggleButton(
@@ -51,7 +53,10 @@ fun PreviewToggleButton(
         modifier = modifier
     ) {
         Icon(
-            imageVector = if (isPreviewMode) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+            painter = if (isPreviewMode) 
+                painterResource(id = R.drawable.visibility_off_24) 
+            else 
+                painterResource(id = R.drawable.visibility_24),
             contentDescription = if (isPreviewMode) "Выключить предпросмотр" else "Включить предпросмотр",
             modifier = Modifier
                 .size(24.dp)

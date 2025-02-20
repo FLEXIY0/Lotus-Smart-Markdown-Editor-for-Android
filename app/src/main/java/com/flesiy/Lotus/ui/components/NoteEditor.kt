@@ -98,6 +98,7 @@ import android.content.Context
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import android.widget.Toast
+import androidx.compose.material3.TextField
 
 private const val TAG = "NoteEditor"
 
@@ -529,7 +530,10 @@ fun NoteEditor(
                                         .padding(8.dp)
                                 ) {
                                     Icon(
-                                        imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
+                                        painter = if (isListening) 
+                                            painterResource(id = R.drawable.stop_24) 
+                                        else 
+                                            painterResource(id = R.drawable.mic_24),
                                         contentDescription = if (isListening) "Остановить запись" else "Начать запись",
                                         tint = iconTint
                                     )
@@ -637,7 +641,7 @@ fun NoteEditor(
                                 onClick = { showNotificationsPanel = true }
                             ) {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.ic_notification),
+                                    painter = painterResource(id = R.drawable.bell_24),
                                     contentDescription = "Уведомления",
                                     tint = MaterialTheme.colorScheme.primary
                                 )
