@@ -26,8 +26,8 @@ fun FontSizeSlider(
         Slider(
             value = value,
             onValueChange = onValueChange,
-            valueRange = 12f..24f,
-            steps = 11,
+            valueRange = 8f..24f,
+            steps = 15,
             modifier = Modifier.fillMaxWidth()
         )
     }

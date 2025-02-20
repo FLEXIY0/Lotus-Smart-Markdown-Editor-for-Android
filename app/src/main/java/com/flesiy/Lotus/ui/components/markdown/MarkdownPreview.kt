@@ -10,7 +10,9 @@ import android.view.View
 import android.widget.TextView
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material3.*
@@ -217,6 +219,7 @@ fun MarkdownPreview(
 
     Box(modifier = modifier) {
         AndroidView(
+            modifier = Modifier.fillMaxWidth(),
             factory = { ctx ->
                 createPreviewTextView(ctx, fontSize).apply {
                     movementMethod = CheckboxClickHandler(content, onContentChange)
@@ -235,7 +238,7 @@ fun MarkdownPreview(
 private fun createPreviewTextView(context: Context, fontSize: Float): TextView {
     return TextView(context).apply {
         textSize = fontSize
-        setPadding(16, 16, 16, 16)
+        setPadding(40, 16, 20, 16)
         setTextIsSelectable(true)
         gravity = android.view.Gravity.TOP
     }
