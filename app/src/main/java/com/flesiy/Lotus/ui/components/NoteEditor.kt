@@ -826,6 +826,12 @@ fun NoteEditor(
             onDismiss = { showTimeMarkDialog = false },
             onConfirm = { timestamp, description ->
                 val timeMarkText = buildString {
+                    // Добавляем перенос строки, если текст не начинается с него
+                    if (!note.content.endsWith("\n")) {
+                        append("\n")
+                    }
+                    // Добавляем символ метки и отступ
+                    append("⌚ ")
                     // Форматируем дату
                     append("*")
                     append(timestamp.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")))
@@ -837,6 +843,8 @@ fun NoteEditor(
                         append(description)
                         append("***")
                     }
+                    // Добавляем перенос строки в конце
+                    append("\n")
                 }
                 
                 val currentText = note.content
