@@ -49,6 +49,8 @@ import io.noties.markwon.image.coil.CoilImagesPlugin
 
 import java.lang.reflect.Field
 import java.util.concurrent.Executors
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.toArgb
 
 private class ImageKeyboardEditText(context: Context) : EditText(context) {
     private var isUpdatingNumbers = false // Флаг для предотвращения рекурсии
@@ -232,6 +234,7 @@ fun CustomMarkdownEditor(
 ) {
     val context = LocalContext.current
     val isDarkTheme by remember { derivedStateOf { ThemeState.isDarkTheme } }
+    val primaryColor = MaterialTheme.colorScheme.primary.toArgb()
 
     AndroidView(
         modifier = modifier,
@@ -241,7 +244,8 @@ fun CustomMarkdownEditor(
                 value = value,
                 onValueChange = onValueChange,
                 hint = hint,
-                fontSize = fontSize
+                fontSize = fontSize,
+                cursorColor = primaryColor
             ).also { editor ->
                 onEditorCreated?.invoke(editor)
                 editor.setTextColor(if (isDarkTheme) Color.WHITE else Color.BLACK)
@@ -266,7 +270,8 @@ private fun createEditor(
     value: String,
     onValueChange: (String) -> Unit,
     hint: String?,
-    fontSize: Float
+    fontSize: Float,
+    cursorColor: Int
 ): EditText {
     return ImageKeyboardEditText(context).apply {
         setText(value)
@@ -332,7 +337,7 @@ private fun createEditor(
         // Настройка цвета курсора
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val wrapped = DrawableCompat.wrap(textCursorDrawable!!).mutate()
-            DrawableCompat.setTint(wrapped, currentTextColor)
+            DrawableCompat.setTint(wrapped, cursorColor)
             wrapped.setBounds(0, 0, wrapped.intrinsicWidth, wrapped.intrinsicHeight)
             textCursorDrawable = wrapped
         } else {
@@ -350,7 +355,7 @@ private fun createEditor(
                 // Получаем drawable и устанавливаем цветовой фильтр
                 val drawable: Drawable = ContextCompat.getDrawable(context, drawableResId)!!
                 @Suppress("DEPRECATION")
-                drawable.setColorFilter(currentTextColor, PorterDuff.Mode.SRC_IN)
+                drawable.setColorFilter(cursorColor, PorterDuff.Mode.SRC_IN)
                 val drawables = arrayOf(drawable, drawable)
 
                 // Устанавливаем drawables
@@ -358,6 +363,7 @@ private fun createEditor(
                 field.isAccessible = true
                 field.set(editor, drawables)
             } catch (ignored: Exception) {
+                // Игнорируем ошибки, так как это не критично
             }
         }
     }

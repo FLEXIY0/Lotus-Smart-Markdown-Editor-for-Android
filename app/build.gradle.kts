@@ -134,6 +134,9 @@ dependencies {
 
     // Reorderable
     implementation("org.burnoutcrew.composereorderable:reorderable:0.9.6")
+    implementation ("androidx.compose.material3:material3:1.0.0") // или последняя версия
+    implementation ("com.google.android.material:material:1.6.0") // или последняя версия// или последняя версия
+
 }
 
 configurations.all {

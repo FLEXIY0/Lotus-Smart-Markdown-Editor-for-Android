@@ -743,7 +743,7 @@ fun NoteEditor(
                             }
                         }
 
-                        if (viewModel.isTodoEnabled.collectAsState().value) {
+                        if (!isPreviewMode && viewModel.isTodoEnabled.collectAsState().value) {
                             IconButton(
                                 onClick = {
                                     Log.d(TAG, "🔲 Нажата кнопка добавления чекбокса")
@@ -782,13 +782,13 @@ fun NoteEditor(
                                             editor.setText(newText)
                                             
                                             // Сразу устанавливаем позицию курсора
-                                                    val finalPosition = newCursorPosition.coerceIn(0, editor.length())
-                                                    editor.setSelection(finalPosition)
+                                            val finalPosition = newCursorPosition.coerceIn(0, editor.length())
+                                            editor.setSelection(finalPosition)
                                             
                                             // Только после этого уведомляем об изменении контента
                                             onContentChange(newText)
                                             
-                                                    Log.d(TAG, "✅ Курсор успешно установлен в позицию $finalPosition")
+                                            Log.d(TAG, "✅ Курсор успешно установлен в позицию $finalPosition")
                                         } catch (e: Exception) {
                                             Log.e(TAG, "❌ Ошибка при добавлении чекбокса: ${e.message}")
                                         }
@@ -918,10 +918,10 @@ fun NoteEditor(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                .padding(end = 4.dp)
-                .verticalScroll(scrollState)
-                .drawScrollbar(
-                    state = scrollState,
+                    .padding(end = 4.dp)
+                    .verticalScroll(scrollState)
+                    .drawScrollbar(
+                        state = scrollState,
                         color = scrollbarColor
                     )
                     .clickable(
@@ -941,9 +941,8 @@ fun NoteEditor(
                     modifier = Modifier
                         .fillMaxWidth()
                         .defaultMinSize(minHeight = 400.dp)
-
                         .padding(bottom = 10.dp)
-            ) {
+                ) {
                 AnimatedMarkdownContent(
                         content = note.content,
                         onContentChange = { newContent ->
@@ -1006,7 +1005,7 @@ fun NoteEditor(
                         append("\n")
                     }
                     // Добавляем символ метки и отступ
-                    append("⌚ ")
+                    append("")
                     // Форматируем дату
                     append("*")
                     append(timestamp.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")))
