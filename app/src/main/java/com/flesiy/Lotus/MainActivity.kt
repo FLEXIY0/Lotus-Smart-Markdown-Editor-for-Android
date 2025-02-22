@@ -112,6 +112,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Инициализация состояния темы
+        ThemeState.init(this)
+
         // Запрашиваем разрешения для уведомлений
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -625,22 +628,24 @@ fun LotusApp(
                                     )
                                 }
                                 if (currentNote.isPreviewMode) {
-                                    IconButton(
-                                        onClick = { viewModel.toggleVersionHistory() },
-                                        modifier = Modifier.size(48.dp)
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.history_24px),
-                                            contentDescription = "История версий",
-                                            tint = if (useClassicTheme) {
-                                                if (darkTheme) classic_dark_secondary else classic_light_secondary
-                                            } else {
-                                                if (viewModel.isVersionHistoryVisible.collectAsState().value)
-                                                    MaterialTheme.colorScheme.primary
-                                                else
-                                                    MaterialTheme.colorScheme.onSurface
-                                            }
-                                        )
+                                    if (viewModel.isVersionControlEnabled.collectAsState().value) {
+                                        IconButton(
+                                            onClick = { viewModel.toggleVersionHistory() },
+                                            modifier = Modifier.size(48.dp)
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.history_24px),
+                                                contentDescription = "История версий",
+                                                tint = if (useClassicTheme) {
+                                                    if (darkTheme) classic_dark_secondary else classic_light_secondary
+                                                } else {
+                                                    if (viewModel.isVersionHistoryVisible.collectAsState().value)
+                                                        MaterialTheme.colorScheme.primary
+                                                    else
+                                                        MaterialTheme.colorScheme.onSurface
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                                 IconButton(

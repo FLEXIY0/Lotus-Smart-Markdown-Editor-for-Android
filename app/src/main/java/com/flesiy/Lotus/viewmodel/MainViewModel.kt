@@ -168,6 +168,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _testResult = MutableStateFlow<String?>(null)
     val testResult = _testResult.asStateFlow()
 
+    private val _isVersionControlEnabled = MutableStateFlow(true)
+    val isVersionControlEnabled = _isVersionControlEnabled.asStateFlow()
+
     sealed class ExportProgress {
         data object Idle : ExportProgress()
         data class InProgress(val current: Int, val total: Int) : ExportProgress()
@@ -194,6 +197,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadShowThinkingTags()
         loadSystemPrompt()
         loadSelectedModel()
+        loadVersionControlEnabled()
+    }
+
+    private fun loadVersionControlEnabled() {
+        viewModelScope.launch {
+            userPreferences.isVersionControlEnabled.collect { enabled ->
+                _isVersionControlEnabled.value = enabled
+            }
+        }
+    }
+
+    fun setVersionControlEnabled(enabled: Boolean) {
+        _isVersionControlEnabled.value = enabled
+        viewModelScope.launch {
+            userPreferences.setVersionControlEnabled(enabled)
+        }
     }
 
     fun setActivity(activity: Activity) {

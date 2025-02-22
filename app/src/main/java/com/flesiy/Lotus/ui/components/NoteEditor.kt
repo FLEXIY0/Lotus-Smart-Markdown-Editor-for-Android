@@ -485,14 +485,14 @@ fun NoteEditor(
                                 ),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
-                            Text(
+                        Text(
                                 text = "${note.content.length} сим.",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontFamily = FontFamily.Default,
-                                    fontWeight = FontWeight.Light
-                                ),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontFamily = FontFamily.Default,
+                                fontWeight = FontWeight.Light
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
                         }
                     }
 
@@ -720,7 +720,7 @@ fun NoteEditor(
                                 }
                             }
                         }
-
+                        
                         if (!isPreviewMode) {
                             IconButton(onClick = { showMediaDialog = true }) {
                                 Icon(
@@ -743,7 +743,7 @@ fun NoteEditor(
                             }
                         }
 
-                        if (!isPreviewMode) {
+                        if (viewModel.isTodoEnabled.collectAsState().value) {
                             IconButton(
                                 onClick = {
                                     Log.d(TAG, "🔲 Нажата кнопка добавления чекбокса")
@@ -757,14 +757,12 @@ fun NoteEditor(
                                             
                                             val safePosition = cursorPosition.coerceIn(0, currentText.length)
                                             Log.d(TAG, "✔️ Безопасная позиция курсора: $safePosition")
-                                            
-                                            val checkboxText = "- [ ] "
+                                            val checkboxText = "- [ ] ";
                                             
                                             // Определяем, нужно ли добавить перенос строки перед чекбоксом
                                             val needsNewLine = safePosition > 0 && 
                                                              !currentText.substring(0, safePosition).endsWith("\n")
                                             Log.d(TAG, "↩️ Нужен перенос строки: $needsNewLine")
-                                            
                                             val newText = buildString {
                                                 append(currentText.substring(0, safePosition))
                                                 if (needsNewLine) {
@@ -774,7 +772,6 @@ fun NoteEditor(
                                                 append(checkboxText)
                                                 append(currentText.substring(safePosition))
                                             }
-                                            
                                             Log.d(TAG, "📄 Новый текст: '$newText'")
                                             
                                             // Вычисляем новую позицию курсора
@@ -875,7 +872,7 @@ fun NoteEditor(
                                     }
                                 }
                             ) {
-                                Icon(
+                            Icon(
                                     painter = painterResource(id = R.drawable.share_24px),
                                     contentDescription = "Поделиться",
                                     tint = MaterialTheme.colorScheme.primary
@@ -921,10 +918,10 @@ fun NoteEditor(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(end = 4.dp)
-                    .verticalScroll(scrollState)
-                    .drawScrollbar(
-                        state = scrollState,
+                .padding(end = 4.dp)
+                .verticalScroll(scrollState)
+                .drawScrollbar(
+                    state = scrollState,
                         color = scrollbarColor
                     )
                     .clickable(
@@ -946,24 +943,24 @@ fun NoteEditor(
                         .defaultMinSize(minHeight = 400.dp)
 
                         .padding(bottom = 10.dp)
-                ) {
-                    AnimatedMarkdownContent(
+            ) {
+                AnimatedMarkdownContent(
                         content = note.content,
                         onContentChange = { newContent ->
                             if (newContent != note.content) {
                                 hasUnsavedChanges = true
                                 onContentChange(newContent)
                             }
-                        },
-                        isPreviewMode = isPreviewMode,
-                        modifier = Modifier.fillMaxWidth(),
-                        hint = "Соберитесь с мыслями...",
-                        onEditorCreated = { editor ->
-                            editorRef = editor
+                    },
+                    isPreviewMode = isPreviewMode,
+                    modifier = Modifier.fillMaxWidth(),
+                    hint = "Соберитесь с мыслями...",
+                    onEditorCreated = { editor ->
+                        editorRef = editor
                         },
                         fontSize = fontSize
                     )
-                }
+                    }
             }
         }
     }

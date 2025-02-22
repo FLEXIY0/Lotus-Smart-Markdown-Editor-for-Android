@@ -665,6 +665,49 @@ fun DeveloperRoom(
             }
 
             ElevatedCard(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Контроль версий заметки",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "Включить иконку контроля версий",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        Switch(
+                            checked = viewModel.isVersionControlEnabled.collectAsState().value,
+                            onCheckedChange = { enabled ->
+                                viewModel.setVersionControlEnabled(enabled)
+                            }
+                        )
+                    }
+                }
+            }
+
+            ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = { showHelpGuide = true }
             ) {

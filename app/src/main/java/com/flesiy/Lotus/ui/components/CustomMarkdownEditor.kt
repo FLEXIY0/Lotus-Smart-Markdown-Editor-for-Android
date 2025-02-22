@@ -1,6 +1,7 @@
 package com.flesiy.Lotus.ui.components
 
 import android.content.Context
+import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.drawable.Drawable
 import android.os.Build
@@ -16,6 +17,10 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.TextView
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -29,6 +34,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.inputmethod.EditorInfoCompat
 import androidx.core.view.inputmethod.InputConnectionCompat
 import androidx.core.widget.addTextChangedListener
+import com.flesiy.Lotus.ui.theme.ThemeState
 import com.flesiy.Lotus.ui.components.markdown.handler.*
 import io.noties.markwon.Markwon
 import io.noties.markwon.core.CorePlugin
@@ -225,6 +231,7 @@ fun CustomMarkdownEditor(
     fontSize: Float = 16f
 ) {
     val context = LocalContext.current
+    val isDarkTheme by remember { derivedStateOf { ThemeState.isDarkTheme } }
 
     AndroidView(
         modifier = modifier,
@@ -237,10 +244,14 @@ fun CustomMarkdownEditor(
                 fontSize = fontSize
             ).also { editor ->
                 onEditorCreated?.invoke(editor)
+                editor.setTextColor(if (isDarkTheme) Color.WHITE else Color.BLACK)
+                editor.setHintTextColor(if (isDarkTheme) Color.GRAY else Color.DKGRAY)
             }
         },
         update = { editText ->
             editText.textSize = fontSize
+            editText.setTextColor(if (isDarkTheme) Color.WHITE else Color.BLACK)
+            editText.setHintTextColor(if (isDarkTheme) Color.GRAY else Color.DKGRAY)
             if (value != editText.text.toString()) {
                 val newText = SpannableStringBuilder(value)
                 editText.text = newText

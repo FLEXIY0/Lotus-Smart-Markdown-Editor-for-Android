@@ -7,6 +7,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import android.content.SharedPreferences
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -23,6 +24,8 @@ class UserPreferences(private val context: Context) {
     private val SYSTEM_PROMPT = stringPreferencesKey("system_prompt")
     private val SELECTED_MODEL = stringPreferencesKey("selected_model")
     private val TEXT_ALPHA = floatPreferencesKey("text_alpha")
+    private val IS_VERSION_CONTROL_ENABLED = booleanPreferencesKey("is_version_control_enabled")
+    private val sharedPreferences: SharedPreferences = context.getSharedPreferences("user_preferences", Context.MODE_PRIVATE)
 
     val skipDeleteConfirmation: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
@@ -176,6 +179,23 @@ class UserPreferences(private val context: Context) {
     suspend fun setTextAlpha(alpha: Float) {
         context.dataStore.edit { preferences ->
             preferences[TEXT_ALPHA] = alpha
+        }
+    }
+
+    var isDarkTheme: Boolean
+        get() = sharedPreferences.getBoolean("is_dark_theme", false)
+        set(value) {
+            sharedPreferences.edit().putBoolean("is_dark_theme", value).apply()
+        }
+
+    val isVersionControlEnabled: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[IS_VERSION_CONTROL_ENABLED] ?: true
+        }
+
+    suspend fun setVersionControlEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[IS_VERSION_CONTROL_ENABLED] = enabled
         }
     }
 } 
