@@ -88,7 +88,7 @@ private val ClassicDarkColorScheme = darkColorScheme(
 
 @Composable
 fun LotusTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = ThemeState.isDarkTheme,
     dynamicColor: Boolean = true,
     useClassicTheme: Boolean = false,
     content: @Composable () -> Unit

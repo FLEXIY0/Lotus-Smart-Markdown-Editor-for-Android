@@ -62,6 +62,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -91,6 +92,7 @@ import com.flesiy.Lotus.ui.components.NotesList
 import com.flesiy.Lotus.ui.components.SearchDialog
 import com.flesiy.Lotus.ui.components.TrashScreen
 import com.flesiy.Lotus.ui.theme.LotusTheme
+import com.flesiy.Lotus.ui.theme.ThemeState
 import com.flesiy.Lotus.ui.theme.classic_dark_secondary
 import com.flesiy.Lotus.ui.theme.classic_dark_secondaryContainer
 import com.flesiy.Lotus.ui.theme.classic_light_secondary
@@ -152,7 +154,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeViewModel: ThemeViewModel = viewModel()
             val useClassicTheme by themeViewModel.useClassicTheme.collectAsState()
-            val darkTheme = isSystemInDarkTheme()
+            val darkTheme by remember { derivedStateOf { ThemeState.isDarkTheme } }
+            Log.d("MainActivity", "Текущая тема (MainActivity): isDarkTheme = $darkTheme")
             
             LotusTheme(
                 useClassicTheme = useClassicTheme,
@@ -251,7 +254,7 @@ fun LotusApp(
     themeViewModel: ThemeViewModel,
     onNavControllerCreated: (NavController) -> Unit,
     useClassicTheme: Boolean = false,
-    darkTheme: Boolean = isSystemInDarkTheme()
+    darkTheme: Boolean = ThemeState.isDarkTheme
 ) {
     val navController = rememberNavController()
     var showFontSizeDialog by remember { mutableStateOf(false) }
@@ -819,9 +822,15 @@ fun LotusApp(
     }
 
     if (showFontSizeDialog) {
+        Log.d("MainActivity", "Открытие диалога с темой: isDarkTheme = ${ThemeState.isDarkTheme}")
         FontSizeDialog(
             currentSize = fontSize,
+            isDarkTheme = ThemeState.isDarkTheme,
             onSizeChange = { viewModel.setFontSize(it) },
+            onThemeChange = { isDark -> 
+                Log.d("MainActivity", "Применение новой темы: $isDark")
+                ThemeState.toggleTheme(isDark)
+            },
             onDismiss = { showFontSizeDialog = false }
         )
     }

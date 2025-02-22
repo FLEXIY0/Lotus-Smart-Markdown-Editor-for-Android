@@ -122,11 +122,12 @@ private fun Modifier.drawScrollbar(
         val maxOffset = height - thumbHeight
         val thumbOffset = (scrollPercent * maxOffset).coerceIn(0f, maxOffset)
         
-        // Рисуем только ползунок
-        drawRect(
-            color = color.copy(alpha = 0.5f),
+        // Рисуем скругленный ползунок с переданным цветом
+        drawRoundRect(
+            color = color.copy(alpha = 0.3f),
             topLeft = Offset(size.width - 4.dp.toPx(), thumbOffset),
-            size = Size(4.dp.toPx(), thumbHeight)
+            size = Size(4.dp.toPx(), thumbHeight),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx())
         )
     }
 }
@@ -419,6 +420,8 @@ fun NoteEditor(
     val imeHeight = with(LocalDensity.current) { windowInsets.getBottom(LocalDensity.current).toDp() }
     val bottomPadding = if (imeHeight > 0.dp) imeHeight else 0.dp
 
+    val scrollbarColor = MaterialTheme.colorScheme.primary
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = if (useClassicTheme) {
@@ -509,12 +512,12 @@ fun NoteEditor(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
+                    Text(
                                     text = "Изменено: ${formatDate(note.modifiedAt)}",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontFamily = FontFamily.Default,
-                                        fontWeight = FontWeight.Light
-                                    ),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontFamily = FontFamily.Default,
+                            fontWeight = FontWeight.Light
+                        ),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                 )
                                 Text(
@@ -782,13 +785,13 @@ fun NoteEditor(
                                             editor.setText(newText)
                                             
                                             // Сразу устанавливаем позицию курсора
-                                            val finalPosition = newCursorPosition.coerceIn(0, editor.length())
-                                            editor.setSelection(finalPosition)
+                                                    val finalPosition = newCursorPosition.coerceIn(0, editor.length())
+                                                    editor.setSelection(finalPosition)
                                             
                                             // Только после этого уведомляем об изменении контента
                                             onContentChange(newText)
                                             
-                                            Log.d(TAG, "✅ Курсор успешно установлен в позицию $finalPosition")
+                                                    Log.d(TAG, "✅ Курсор успешно установлен в позицию $finalPosition")
                                         } catch (e: Exception) {
                                             Log.e(TAG, "❌ Ошибка при добавлении чекбокса: ${e.message}")
                                         }
@@ -922,7 +925,7 @@ fun NoteEditor(
                     .verticalScroll(scrollState)
                     .drawScrollbar(
                         state = scrollState,
-                        color = MaterialTheme.colorScheme.surfaceVariant
+                        color = scrollbarColor
                     )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
