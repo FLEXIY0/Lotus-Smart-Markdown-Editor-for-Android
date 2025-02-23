@@ -37,6 +37,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModelProvider
 import com.flesiy.Lotus.viewmodel.MainViewModel
+import io.noties.markwon.core.MarkwonTheme
 
 @Composable
 fun MarkdownPreviewScreen(
@@ -216,9 +217,11 @@ fun MarkdownPreview(
     fontSize: Float = 16f
 ) {
     val context = LocalContext.current
-    val markwon = remember { createMarkwon(context) }
-    val textColor = MaterialTheme.colorScheme.onSurface
     val primaryColor = MaterialTheme.colorScheme.primary
+    val markwon = remember(primaryColor) { 
+        createMarkwon(context, primaryColor.toArgb())
+    }
+    val textColor = MaterialTheme.colorScheme.onSurface
     val viewModel = context.findActivity()?.let { ViewModelProvider(it)[MainViewModel::class.java] }
     val rawAlpha = viewModel?.textAlpha?.collectAsState()?.value ?: 1f
     // Округляем до фиксированных значений (шаг 0.1)
@@ -259,7 +262,7 @@ private fun createPreviewTextView(context: Context, fontSize: Float): TextView {
     }
 }
 
-private fun createMarkwon(context: Context): Markwon {
+private fun createMarkwon(context: Context, linkColor: Int): Markwon {
     return Markwon.builder(context)
         .usePlugin(CorePlugin.create())
         .usePlugin(StrikethroughPlugin.create())
@@ -267,6 +270,11 @@ private fun createMarkwon(context: Context): Markwon {
         .usePlugin(HtmlPlugin.create())
         .usePlugin(CoilImagesPlugin.create(context))
         .usePlugin(LinkifyPlugin.create())
+        .usePlugin(object : AbstractMarkwonPlugin() {
+            override fun configureTheme(builder: MarkwonTheme.Builder) {
+                builder.linkColor(linkColor)
+            }
+        })
         .apply {
             // Добавляем CheckboxPreProcessor только если включены TODO
             val viewModel = context.findActivity()?.let { 
