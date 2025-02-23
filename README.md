@@ -89,4 +89,4 @@ To run tests, execute the command:
 ```
 
 ## License
-This project is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike (CC BY-NC-SA) [license](). You can use, modify, and distribute this project, but not for commercial purposes. All derivative works must be licensed under the same terms. 
+This project is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike (CC BY-NC-SA) [license](LICENSE). You can use, modify, and distribute this project, but not for commercial purposes. All derivative works must be licensed under the same terms. 
