@@ -21,11 +21,8 @@ The Lotus application is a powerful note management tool that allows users to cr
   - Room for database management
   - Coroutines for asynchronous programming
 
-## Integration with Groq
-The Lotus application is integrated with Groq, allowing users to process text notes using a powerful text processor. Groq provides the ability to:
-- Automatically process text, including correcting grammatical errors and improving structure.
-- Generate metadata based on the content of the note.
-- Support for multiple languages, including Russian and English.
+## Groq Integration
+The Lotus application is integrated with Groq, allowing users to utilize advanced artificial intelligence models for text generation and error correction. Groq provides the ability to automatically process text during text transcription, including correcting grammatical errors and improving structure using advanced artificial intelligence techniques.
 
 ## Installation
 1. Clone the repository:
