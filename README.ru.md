@@ -1,9 +1,9 @@
 # Lotus - Smart Markdown Editor for Android
 
 [![GitHub stars](https://img.shields.io/github/stars/FLEXIY0/Lotus-Smart-Markdown-Editor-for-Android?style=social)](https://github.com/FLEXIY0/Lotus-Smart-Markdown-Editor-for-Android/stargazers)
-[![Discord](https://img.shields.io/discord/1303749220842340412?color=7289DA&label=Discord&logo=discord&logoColor=white)](https://link.browser-use.com/discord)
-[![Documentation](https://img.shields.io/badge/Documentation-📕-blue)](https://docs.browser-use.com)
+[![Discord](https://img.shields.io/badge/Discord-7289DA?style=social)](https://discord.com/users/1170835455755964469)
 [![Twitter Follow](https://img.shields.io/twitter/follow/FLEXIY0?style=social)](https://x.com/FLEXIY0)
+[![Donate](https://img.shields.io/badge/Donate-💖-blue)](https://your-donation-alerts-link)
 
 ## Описание
 Приложение Lotus - это мощный инструмент для управления заметками, который позволяет пользователям создавать, редактировать и организовывать свои заметки с помощью удобного интерфейса.
@@ -56,7 +56,7 @@
 - Поддержка двух языков: русский и английский.
 
 ## Демонстрация
-[Ссылка на демо-видео](<URL_демо-видео>)
+[Watch the video](https://youtube.com/shorts/q9V_Bc1s8mk?feature=share)
 
 ## Структура проекта
 - Корневая директория содержит файлы сборки и конфигурационные файлы.
