@@ -28,6 +28,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.material3.Slider
+import androidx.compose.ui.res.stringResource
+import com.flesiy.Lotus.R
+import android.app.Activity
+import android.content.res.Configuration
+import java.util.Locale
+import android.util.Log
 
 private const val DEFAULT_SYSTEM_PROMPT = """When a user sends you a message:
 
@@ -61,11 +67,12 @@ fun DeveloperRoom(
     var showPromptEditor by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     var showHelpGuide by remember { mutableStateOf(false) }
+    val isEnglish by viewModel.isEnglishEnabled.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Комната разработчика") },
+                title = { Text(stringResource(R.string.developer_room_title)) },
                 navigationIcon = {
                     IconButton(
                         onClick = onBack,
@@ -73,7 +80,7 @@ fun DeveloperRoom(
                     ) {
                         Icon(
                             Icons.Default.ArrowBack,
-                            contentDescription = "Назад",
+                            contentDescription = stringResource(R.string.back),
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -90,21 +97,14 @@ fun DeveloperRoom(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Warning,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(48.dp)
-            )
-            
             Text(
-                text = "Экспериментальный режим",
+                text = stringResource(R.string.experimental_mode),
                 style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.error
+                color = MaterialTheme.colorScheme.primary
             )
             
             Text(
-                text = "Данный раздел содержит экспериментальный функционал, который находится в разработке. Использование этих функций может привести к непредсказуемым результатам.",
+                text = stringResource(R.string.experimental_section_description),
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -124,7 +124,7 @@ fun DeveloperRoom(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Настройки распознавания речи",
+                            text = stringResource(R.string.speech_recognition_settings),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -141,11 +141,11 @@ fun DeveloperRoom(
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                text = "Программная постобработка",
+                                text = stringResource(R.string.software_post_processing),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                text = "Автоматическое исправление пунктуации и форматирования. Экспериментальная функция, может содержать ошибки.",
+                                text = stringResource(R.string.software_post_processing_description),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -177,7 +177,7 @@ fun DeveloperRoom(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    text = "AI постобработка (Groq)",
+                                    text = stringResource(R.string.ai_post_processing),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 if (isGroqEnabled) {
@@ -187,7 +187,7 @@ fun DeveloperRoom(
                                         shape = MaterialTheme.shapes.small
                                     ) {
                                         Text(
-                                            text = "Активно",
+                                            text = stringResource(R.string.active),
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                             style = MaterialTheme.typography.labelSmall
                                         )
@@ -195,7 +195,7 @@ fun DeveloperRoom(
                                 }
                             }
                             Text(
-                                text = "Использование ИИ для исправления текста",
+                                text = stringResource(R.string.ai_post_processing_description),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -230,11 +230,11 @@ fun DeveloperRoom(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Настроить системный промпт")
+                                Text(stringResource(R.string.configure_system_prompt))
                             }
                             if (currentSystemPrompt != null && currentSystemPrompt != DEFAULT_SYSTEM_PROMPT) {
                                 Text(
-                                    text = "Промпт изменен",
+                                    text = stringResource(R.string.changed_status),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.padding(top = 4.dp)
@@ -254,11 +254,11 @@ fun DeveloperRoom(
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Text(
-                                    text = "Теги мышления",
+                                    text = stringResource(R.string.thinking_tags),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
-                                    text = "Показывать теги <think> в ответах модели",
+                                    text = stringResource(R.string.show_thinking_tags_description),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -286,7 +286,7 @@ fun DeveloperRoom(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Модель",
+                                    text = stringResource(R.string.model),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
@@ -320,7 +320,7 @@ fun DeveloperRoom(
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Обновить список")
+                                        Text(stringResource(R.string.refresh_list))
                                     }
                                 }
                             }
@@ -411,7 +411,7 @@ fun DeveloperRoom(
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Тестировать модель")
+                                        Text(stringResource(R.string.test_model))
                                     }
                                     
                                     if (testResult != null) {
@@ -446,7 +446,7 @@ fun DeveloperRoom(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Управление файлами",
+                            text = stringResource(R.string.file_management),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -457,7 +457,7 @@ fun DeveloperRoom(
                                 shape = MaterialTheme.shapes.small
                             ) {
                                 Text(
-                                    text = "Активно",
+                                    text = stringResource(R.string.active),
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     style = MaterialTheme.typography.labelSmall
                                 )
@@ -476,11 +476,11 @@ fun DeveloperRoom(
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                text = "Загрузка и отправка",
+                                text = stringResource(R.string.load_and_send),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                text = "Экспериментальная функция для импорта и экспорта заметок. В разработке.",
+                                text = stringResource(R.string.file_management_description),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -509,7 +509,7 @@ fun DeveloperRoom(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Чекбоксы",
+                            text = stringResource(R.string.todo_checkboxes),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -520,7 +520,7 @@ fun DeveloperRoom(
                                 shape = MaterialTheme.shapes.small
                             ) {
                                 Text(
-                                    text = "Активно",
+                                    text = stringResource(R.string.active),
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     style = MaterialTheme.typography.labelSmall
                                 )
@@ -539,11 +539,11 @@ fun DeveloperRoom(
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                text = "TODO чекбоксы",
+                                text = stringResource(R.string.todo_checkboxes_description),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                text = "Экспериментальная функция чекбоксов в режиме предпросмотра. Может работать нестабильно.",
+                                text = stringResource(R.string.todo_checkboxes_description_additional),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -572,7 +572,7 @@ fun DeveloperRoom(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Настройки темы",
+                            text = stringResource(R.string.theme_settings),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -589,11 +589,11 @@ fun DeveloperRoom(
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                text = "Классическая тема",
+                                text = stringResource(R.string.classic_theme),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                text = "Минималистичный дизайн в стиле Cupertino с чёрно-белой цветовой схемой",
+                                text = stringResource(R.string.classic_theme_description),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -623,7 +623,7 @@ fun DeveloperRoom(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Настройки текста",
+                            text = stringResource(R.string.text_settings),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -641,11 +641,11 @@ fun DeveloperRoom(
                         }
                         
                         Text(
-                            text = "Прозрачность текста: ${displayAlpha}%",
+                            text = stringResource(R.string.text_transparency) + ": ${displayAlpha}%",
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = "Настройка прозрачности текста в режиме предпросмотра",
+                            text = stringResource(R.string.text_transparency_description),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -678,7 +678,7 @@ fun DeveloperRoom(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Контроль версий заметки",
+                            text = stringResource(R.string.version_control),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -693,7 +693,7 @@ fun DeveloperRoom(
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                text = "Включить иконку контроля версий",
+                                text = stringResource(R.string.enable_version_control_icon),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -712,14 +712,35 @@ fun DeveloperRoom(
                 onClick = { showHelpGuide = true }
             ) {
                 ListItem(
-                    headlineContent = { Text("Справка") },
-                    supportingContent = { Text("Подробное описание всех функций приложения") },
+                    headlineContent = { Text(stringResource(R.string.help)) },
+                    supportingContent = { Text(stringResource(R.string.help_description)) },
                     leadingContent = {
                         Icon(
                             Icons.Default.Help,
-                            contentDescription = "Справка",
+                            contentDescription = stringResource(R.string.help),
                             tint = MaterialTheme.colorScheme.primary
                         )
+                    }
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (isEnglish) "Switch to Russian" else stringResource(R.string.switch_to_english),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Switch(
+                    checked = isEnglish,
+                    onCheckedChange = { enabled ->
+                        viewModel.setEnglishEnabled(enabled)
+                        val locale = if (enabled) Locale("en") else Locale("ru")
+                        updateLocale(context, locale)
                     }
                 )
             }
@@ -729,11 +750,11 @@ fun DeveloperRoom(
     if (showErrorDialog) {
         AlertDialog(
             onDismissRequest = { showErrorDialog = false },
-            title = { Text("Ошибка") },
+            title = { Text(stringResource(R.string.error)) },
             text = { Text(errorMessage) },
             confirmButton = {
                 TextButton(onClick = { showErrorDialog = false }) {
-                    Text("OK")
+                    Text(stringResource(R.string.ok))
                 }
             }
         )
@@ -742,11 +763,11 @@ fun DeveloperRoom(
     if (showPromptEditor) {
         AlertDialog(
             onDismissRequest = { showPromptEditor = false },
-            title = { Text("Системный промпт") },
+            title = { Text(stringResource(R.string.system_prompt)) },
             text = {
                 Column {
                     Text(
-                        "Этот промпт определяет поведение AI при обработке текста",
+                        stringResource(R.string.system_prompt_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -770,7 +791,7 @@ fun DeveloperRoom(
                             systemPrompt = DEFAULT_SYSTEM_PROMPT
                         }
                     ) {
-                        Text("По умолчанию")
+                        Text(stringResource(R.string.default_button))
                     }
                     Button(
                         onClick = {
@@ -778,13 +799,13 @@ fun DeveloperRoom(
                             showPromptEditor = false
                         }
                     ) {
-                        Text("Применить")
+                        Text(stringResource(R.string.apply))
                     }
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showPromptEditor = false }) {
-                    Text("Отмена")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -800,4 +821,13 @@ fun DeveloperRoom(
 private fun checkInternetPermission(context: Context): Boolean {
     return context.checkSelfPermission(android.Manifest.permission.INTERNET) == 
         android.content.pm.PackageManager.PERMISSION_GRANTED
+}
+
+private fun updateLocale(context: Context, locale: Locale) {
+    Log.d("DeveloperRoom", "Updating locale to: $locale")
+    Locale.setDefault(locale)
+    val config = Configuration(context.resources.configuration)
+    config.setLocale(locale)
+    context.resources.updateConfiguration(config, context.resources.displayMetrics)
+    (context as? Activity)?.recreate()
 } 

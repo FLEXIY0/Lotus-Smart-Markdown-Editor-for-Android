@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lotus</string>
+    <string name="developer_room_title">Developer Room</string>
+    <string name="experimental_mode">Experimental Mode</string>
+    <string name="experimental_functionality_warning">This section contains experimental functionality that is under development. Using these features may lead to unpredictable results.</string>
+    <string name="speech_recognition_settings">Speech Recognition Settings</string>
+    <string name="ai_post_processing">AI Post-Processing (Groq)</string>
+    <string name="file_management">File Management</string>
+    <string name="todo_checkboxes">TODO Checkboxes</string>
+    <string name="theme_settings">Theme Settings</string>
+    <string name="text_settings">Text Settings</string>
+    <string name="version_control">Version Control</string>
+    <string name="help">Help</string>
+</resources> 

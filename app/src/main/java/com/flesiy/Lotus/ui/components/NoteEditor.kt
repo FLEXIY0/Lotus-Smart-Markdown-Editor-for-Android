@@ -70,6 +70,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -460,7 +461,7 @@ fun NoteEditor(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "${note.content.lines().size} стр.",
+                                text = "${note.content.lines().size} ${stringResource(R.string.pages_short)}",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontFamily = FontFamily.Default,
                                     fontWeight = FontWeight.Light
@@ -478,21 +479,21 @@ fun NoteEditor(
                                         .split(" ")
                                         .filter { it.isNotEmpty() }
                                         .size
-                                } сл.",
+                                } ${stringResource(R.string.words_short)}",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontFamily = FontFamily.Default,
                                     fontWeight = FontWeight.Light
                                 ),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
-                        Text(
-                                text = "${note.content.length} сим.",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontFamily = FontFamily.Default,
-                                fontWeight = FontWeight.Light
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
+                            Text(
+                                text = "${note.content.length} ${stringResource(R.string.chars_short)}",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontFamily = FontFamily.Default,
+                                    fontWeight = FontWeight.Light
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
                         }
                     }
 
@@ -513,7 +514,7 @@ fun NoteEditor(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                     Text(
-                                    text = "Изменено: ${formatDate(note.modifiedAt)}",
+                                    text = stringResource(R.string.modified, formatDate(note.modifiedAt)),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.Light
@@ -521,7 +522,7 @@ fun NoteEditor(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                 )
                                 Text(
-                                    text = "Создано: ${formatDate(note.createdAt)}",
+                                    text = stringResource(R.string.created, formatDate(note.createdAt)),
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontFamily = FontFamily.Default,
                                         fontWeight = FontWeight.Light
@@ -543,7 +544,7 @@ fun NoteEditor(
                             ) {
                                 Column {
                                     Text(
-                                        text = "Абзацев: ${note.content.split("\n\n").size}",
+                                        text = stringResource(R.string.paragraphs, note.content.split("\n\n").size),
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             fontFamily = FontFamily.Default,
                                             fontWeight = FontWeight.Light
@@ -551,7 +552,7 @@ fun NoteEditor(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                     )
                                     Text(
-                                        text = "Чекбоксов: ${note.content.split("\n").count { it.trim().startsWith("- [ ]") || it.trim().startsWith("- [x]") }}",
+                                        text = stringResource(R.string.checkboxes, note.content.split("\n").count { it.trim().startsWith("- [ ]") || it.trim().startsWith("- [x]") }),
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             fontFamily = FontFamily.Default,
                                             fontWeight = FontWeight.Light
@@ -561,7 +562,7 @@ fun NoteEditor(
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
                                     Text(
-                                        text = "Заголовков: ${note.content.split("\n").count { it.trim().startsWith("#") }}",
+                                        text = stringResource(R.string.headings, note.content.split("\n").count { it.trim().startsWith("#") }),
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             fontFamily = FontFamily.Default,
                                             fontWeight = FontWeight.Light
@@ -569,9 +570,7 @@ fun NoteEditor(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                     )
                                     Text(
-                                        text = "Ссылок: ${note.content.split("\n").sumOf { line -> 
-                                            Regex("\\[.*?\\]\\(.*?\\)").findAll(line).count()
-                                        }}",
+                                        text = stringResource(R.string.links, note.content.split("\n").sumOf { line -> Regex("\\[.*?\\]\\(.*?\\)").findAll(line).count() }),
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             fontFamily = FontFamily.Default,
                                             fontWeight = FontWeight.Light
@@ -594,7 +593,7 @@ fun NoteEditor(
                             ) {
                                 Column {
                                     Text(
-                                        text = "ID: ${note.id}",
+                                        text = stringResource(R.string.id, note.id),
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             fontFamily = FontFamily.Default,
                                             fontWeight = FontWeight.Light
@@ -602,7 +601,7 @@ fun NoteEditor(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                     )
                                     Text(
-                                        text = "Версий: ${versions.count { it.noteId == note.id }}",
+                                        text = stringResource(R.string.versions, versions.count { it.noteId == note.id }),
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             fontFamily = FontFamily.Default,
                                             fontWeight = FontWeight.Light
@@ -612,7 +611,7 @@ fun NoteEditor(
                                 }
                                 Column(horizontalAlignment = Alignment.End) {
                                     Text(
-                                        text = if (note.isPinned) "Закреплено" else "Не закреплено",
+                                        text = if (note.isPinned) stringResource(R.string.pinned) else stringResource(R.string.not_pinned),
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             fontFamily = FontFamily.Default,
                                             fontWeight = FontWeight.Light
@@ -620,7 +619,7 @@ fun NoteEditor(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                     )
                                     Text(
-                                        text = "Уведомлений: ${notifications.count { it.noteId == note.id }}",
+                                        text = stringResource(R.string.notifications, notifications.count { it.noteId == note.id }),
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             fontFamily = FontFamily.Default,
                                             fontWeight = FontWeight.Light
@@ -897,12 +896,11 @@ fun NoteEditor(
                         )
                     ) {
                         Text(
-                            text = if (hasUnsavedChanges) "Сохранить" else "Сохранить",
+                            text = if (hasUnsavedChanges) stringResource(R.string.save) else stringResource(R.string.save),
                             color = if (hasUnsavedChanges)
                                 MaterialTheme.colorScheme.onPrimary
                             else
-                                MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.labelLarge
+                                MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }

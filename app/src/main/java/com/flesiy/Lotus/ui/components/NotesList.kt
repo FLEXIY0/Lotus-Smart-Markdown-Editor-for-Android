@@ -41,9 +41,11 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.flesiy.Lotus.R
 import com.flesiy.Lotus.viewmodel.Note
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
@@ -129,9 +131,8 @@ fun NotesList(
         if (pinnedNotes.isNotEmpty()) {
             item(key = "pinned_header") {
                 Text(
-                    text = "Закрепленные",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                    text = stringResource(R.string.pinned_header),
+                    style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
@@ -164,9 +165,8 @@ fun NotesList(
 
                 item(key = "unpinned_header") {
                     Text(
-                        text = "Остальные",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = stringResource(R.string.unpinned_header),
+                        style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                 }

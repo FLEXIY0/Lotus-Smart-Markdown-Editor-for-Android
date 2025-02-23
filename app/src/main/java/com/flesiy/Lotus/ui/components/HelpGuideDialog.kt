@@ -41,8 +41,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.flesiy.Lotus.R
 
 data class HelpItem(
     val title: String,
@@ -63,140 +65,141 @@ fun HelpGuideDialog(
 ) {
     val helpSections = listOf(
         HelpSection(
-            title = "Основные функции",
+            title = stringResource(
+                R.string.help_guide_section_main_features),
             items = listOf(
                 HelpItem(
-                    title = "Создание заметки",
-                    description = "Нажмите на кнопку '+' в нижнем правом углу для создания новой заметки. Заголовок заметки автоматически формируется из первой строки текста с использованием #.",
+                    title = stringResource(R.string.help_create_note_title),
+                    description = stringResource(R.string.help_create_note_description),
                     icon = { Icon(Icons.Default.Add, contentDescription = null) }
                 ),
                 HelpItem(
-                    title = "Удаление заметки",
-                    description = "Смахните заметку вправо в списке для удаления. Удаленные заметки перемещаются в корзину, где хранятся в соответствии с выбранным периодом хранения.",
+                    title = stringResource(R.string.help_delete_note_title),
+                    description = stringResource(R.string.help_delete_note_description),
                     icon = { Icon(Icons.Default.Delete, contentDescription = null) }
                 ),
                 HelpItem(
-                    title = "Закрепление заметки",
-                    description = "Смахните заметку влево в списке для закрепления. Закрепленные заметки отображаются в отдельной секции вверху списка и могут быть переупорядочены.",
+                    title = stringResource(R.string.help_pin_note_title),
+                    description = stringResource(R.string.help_pin_note_description),
                     icon = { Icon(Icons.Default.PushPin, contentDescription = null) }
                 ),
                 HelpItem(
-                    title = "Режим предпросмотра",
-                    description = "Используйте панель быстрого редактирования для переключения между режимом редактирования и предпросмотра. В режиме предпросмотра можно видеть отформатированный текст и отмечать задачи как выполненные.",
+                    title = stringResource(R.string.help_preview_mode_title),
+                    description = stringResource(R.string.help_preview_mode_description),
                     icon = { Icon(Icons.Default.Visibility, contentDescription = null) }
                 ),
                 HelpItem(
-                    title = "Быстрое удаление",
-                    description = "Нажмите на кнопку 'X' в верхней панели для удаления текущей заметки и создания новой. Удаленная заметка будет перемещена в корзину.",
+                    title = stringResource(R.string.help_quick_delete_title),
+                    description = stringResource(R.string.help_quick_delete_description),
                     icon = { Icon(Icons.Default.Clear, contentDescription = null) }
                 )
             )
         ),
         HelpSection(
-            title = "Форматирование текста",
+            title = stringResource(R.string.help_guide_section_text_formatting),
             items = listOf(
                 HelpItem(
-                    title = "Заголовки",
-                    description = "Используйте '#' для заголовков разного уровня (от 1 до 6 '#')",
+                    title = stringResource(R.string.help_headers_title),
+                    description = stringResource(R.string.help_headers_description),
                     icon = { Icon(Icons.Default.Title, contentDescription = null) },
                     example = "# Заголовок 1\n## Заголовок 2"
                 ),
                 HelpItem(
-                    title = "Списки задач",
-                    description = "Создавайте интерактивные списки задач. В режиме предпросмотра можно отмечать задачи как выполненные.",
+                    title = stringResource(R.string.help_task_lists_title),
+                    description = stringResource(R.string.help_task_lists_description),
                     icon = { Icon(Icons.Default.CheckBox, contentDescription = null) },
                     example = "- [ ] Задача 1\n- [x] Выполненная задача"
                 ),
                 HelpItem(
-                    title = "Маркированные списки",
-                    description = "Создавайте маркированные списки, используя '-', '+' или '*' в начале строки",
+                    title = stringResource(R.string.help_bullet_lists_title),
+                    description = stringResource(R.string.help_bullet_lists_description),
                     icon = { Icon(Icons.Default.List, contentDescription = null) },
                     example = "- Пункт 1\n- Пункт 2"
                 ),
                 HelpItem(
-                    title = "Нумерованные списки",
-                    description = "Создавайте нумерованные списки, используя цифры с точкой",
+                    title = stringResource(R.string.help_numbered_lists_title),
+                    description = stringResource(R.string.help_numbered_lists_description),
                     icon = { Icon(Icons.Default.FormatListNumbered, contentDescription = null) },
                     example = "1. Первый пункт\n2. Второй пункт"
                 ),
                 HelpItem(
-                    title = "Выделение текста",
-                    description = "Используйте '*' или '_' для курсива, '**' или '__' для жирного текста",
+                    title = stringResource(R.string.help_text_formatting_title),
+                    description = stringResource(R.string.help_text_formatting_description),
                     icon = { Icon(Icons.Default.FormatBold, contentDescription = null) },
                     example = "*курсив* или **жирный**"
                 ),
                 HelpItem(
-                    title = "Цитаты",
-                    description = "Используйте '>' в начале строки для создания цитат",
+                    title = stringResource(R.string.help_quotes_title),
+                    description = stringResource(R.string.help_quotes_description),
                     icon = { Icon(Icons.Default.FormatQuote, contentDescription = null) },
                     example = "> Это цитата"
                 ),
                 HelpItem(
-                    title = "Таблицы",
-                    description = "Создавайте таблицы, используя вертикальные линии и дефисы",
+                    title = stringResource(R.string.help_tables_title),
+                    description = stringResource(R.string.help_tables_description),
                     icon = { Icon(Icons.Default.TableChart, contentDescription = null) },
                     example = "| Заголовок 1 | Заголовок 2 |\n|------------|-------------|\n| Ячейка 1 | Ячейка 2 |"
                 ),
                 HelpItem(
-                    title = "Ссылки и изображения",
-                    description = "Вставляйте ссылки и изображения с помощью специального синтаксиса",
+                    title = stringResource(R.string.help_links_title),
+                    description = stringResource(R.string.help_links_description),
                     icon = { Icon(Icons.Default.Link, contentDescription = null) },
                     example = "[текст ссылки](URL)\n![описание изображения](путь)"
                 ),
                 HelpItem(
-                    title = "HTML-разметка",
-                    description = "Поддерживается базовая HTML-разметка для дополнительного форматирования",
+                    title = stringResource(R.string.help_html_title),
+                    description = stringResource(R.string.help_html_description),
                     icon = { Icon(Icons.Default.Code, contentDescription = null) },
                     example = "<u>подчёркнутый</u>\n<s>зачёркнутый</s>"
                 )
             )
         ),
         HelpSection(
-            title = "Дополнительные функции",
+            title = stringResource(R.string.help_guide_section_additional_features),
             items = listOf(
                 HelpItem(
-                    title = "Уведомления",
-                    description = "Создавайте напоминания для заметок с различными интервалами повторения: ежедневно, еженедельно, ежемесячно, ежегодно или в определенные дни недели. Уведомления можно включать и отключать, а также редактировать их параметры.",
+                    title = stringResource(R.string.help_notifications_title),
+                    description = stringResource(R.string.help_notifications_description),
                     icon = { Icon(Icons.Default.Notifications, contentDescription = null) }
                 ),
                 HelpItem(
-                    title = "Временные метки",
-                    description = "При создании и редактировании заметок можно добавлять временные метки, которые создают отметку о дате и времени в тексте заметки.",
+                    title = stringResource(R.string.help_timestamps_title),
+                    description = stringResource(R.string.help_timestamps_description),
                     icon = { Icon(Icons.Default.AccessTime, contentDescription = null) }
                 ),
                 HelpItem(
-                    title = "Голосовой ввод",
-                    description = "Используйте кнопку микрофона для голосового ввода текста. Нажмите кнопку еще раз для остановки записи.",
+                    title = stringResource(R.string.help_voice_input_title),
+                    description = stringResource(R.string.help_voice_input_description),
                     icon = { Icon(Icons.Default.Mic, contentDescription = null) }
                 ),
                 HelpItem(
-                    title = "Размер шрифта",
-                    description = "Регулируйте размер шрифта с помощью слайдера в верхней панели приложения.",
+                    title = stringResource(R.string.help_font_size_title),
+                    description = stringResource(R.string.help_font_size_description),
                     icon = { Icon(Icons.Default.TextFields, contentDescription = null) }
                 ),
                 HelpItem(
-                    title = "Корзина",
-                    description = "Удаленные заметки перемещаются в корзину. Период хранения можно настроить от 1 недели до бесконечности. Заметки можно восстановить или удалить окончательно.",
+                    title = stringResource(R.string.help_trash_title),
+                    description = stringResource(R.string.help_trash_description),
                     icon = { Icon(Icons.Default.Delete, contentDescription = null) }
                 ),
                 HelpItem(
-                    title = "История версий",
-                    description = "Автоматически сохраняются версии заметок при существенных изменениях. Доступен просмотр и восстановление предыдущих версий.",
+                    title = stringResource(R.string.help_version_history_title),
+                    description = stringResource(R.string.help_version_history_description),
                     icon = { Icon(Icons.Default.History, contentDescription = null) }
                 )
             )
         ),
         HelpSection(
-            title = "Экспериментальные функции",
+            title = stringResource(R.string.help_guide_section_experimental_features),
             items = listOf(
                 HelpItem(
-                    title = "AI-обработка текста",
-                    description = "Функция постобработки текста с помощью AI находится в разработке. В будущем будет доступна для улучшения форматирования и структуры заметок.",
+                    title = stringResource(R.string.help_ai_processing_title),
+                    description = stringResource(R.string.help_ai_processing_description),
                     icon = { Icon(Icons.Default.Psychology, contentDescription = null) }
                 ),
                 HelpItem(
-                    title = "Управление файлами",
-                    description = "Функции экспорта и импорта заметок, а также синхронизация находятся в разработке.",
+                    title = stringResource(R.string.help_file_management_title),
+                    description = stringResource(R.string.help_file_management_description),
                     icon = { Icon(Icons.Default.Folder, contentDescription = null) }
                 )
             )
@@ -207,7 +210,7 @@ fun HelpGuideDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Справка",
+                text = stringResource(R.string.help_guide_title),
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.padding(bottom = 8.dp)
             )

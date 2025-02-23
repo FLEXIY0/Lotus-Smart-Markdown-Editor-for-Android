@@ -171,6 +171,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isVersionControlEnabled = MutableStateFlow(true)
     val isVersionControlEnabled = _isVersionControlEnabled.asStateFlow()
 
+    private val _isEnglishEnabled = MutableStateFlow(false)
+    val isEnglishEnabled = _isEnglishEnabled.asStateFlow()
+
     sealed class ExportProgress {
         data object Idle : ExportProgress()
         data class InProgress(val current: Int, val total: Int) : ExportProgress()
@@ -198,6 +201,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadSystemPrompt()
         loadSelectedModel()
         loadVersionControlEnabled()
+        loadEnglishEnabled()
     }
 
     private fun loadVersionControlEnabled() {
@@ -1322,6 +1326,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _showThinkingTags.value = show
                 GroqTextProcessor.setShowThinkingTags(show)
             }
+        }
+    }
+
+    private fun loadEnglishEnabled() {
+        viewModelScope.launch {
+            userPreferences.isEnglishEnabled.collect { enabled ->
+                Log.d("MainViewModel", "Loaded English enabled: $enabled")
+                _isEnglishEnabled.value = enabled
+            }
+        }
+    }
+
+    fun setEnglishEnabled(enabled: Boolean) {
+        _isEnglishEnabled.value = enabled
+        viewModelScope.launch {
+            userPreferences.setEnglishEnabled(enabled)
         }
     }
 } 

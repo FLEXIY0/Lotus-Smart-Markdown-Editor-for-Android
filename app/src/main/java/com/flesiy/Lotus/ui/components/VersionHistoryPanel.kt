@@ -10,7 +10,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.flesiy.Lotus.R
 import com.flesiy.Lotus.viewmodel.NoteVersion
 import java.text.SimpleDateFormat
 import java.util.*
@@ -42,14 +44,14 @@ fun VersionHistoryPanel(
                 .padding(16.dp)
         ) {
             Text(
-                text = "Система контроля версий заметок",
+                text = stringResource(R.string.version_control_system),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
             if (noteVersions.isEmpty()) {
                 Text(
-                    text = "Нет сохраненных версий",
+                    text = stringResource(R.string.no_saved_versions),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

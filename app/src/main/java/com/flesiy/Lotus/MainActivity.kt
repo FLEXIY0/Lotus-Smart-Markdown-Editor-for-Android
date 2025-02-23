@@ -75,6 +75,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
@@ -108,6 +109,13 @@ class MainActivity : ComponentActivity() {
     private val doubleBackPressedInterval = 2000L
     private var currentNavController: NavController? = null
     private var isNavigating = false
+
+    companion object {
+        private const val ERROR_OPENING_FILE = "Error opening file"
+        private const val FAILED_TO_OPEN_FILE = "Failed to open file: %s"
+        private const val PRESS_AGAIN_TO_EXIT = "Press again to exit"
+        private const val ERROR_OPENING_DIRECTORY = "Error opening directory"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -158,7 +166,8 @@ class MainActivity : ComponentActivity() {
             val themeViewModel: ThemeViewModel = viewModel()
             val useClassicTheme by themeViewModel.useClassicTheme.collectAsState()
             val darkTheme by remember { derivedStateOf { ThemeState.isDarkTheme } }
-            Log.d("MainActivity", "Текущая тема (MainActivity): isDarkTheme = $darkTheme")
+
+            LogThemeChange(darkTheme)
             
             LotusTheme(
                 useClassicTheme = useClassicTheme,
@@ -222,11 +231,11 @@ class MainActivity : ComponentActivity() {
                         }
                     } catch (e: Exception) {
                         withContext(Dispatchers.Main) {
-                            Log.e("MainActivity", "Ошибка при открытии файла", e)
+                            Log.e("MainActivity", ERROR_OPENING_FILE, e)
                             Toast.makeText(
                                 this@MainActivity,
-                                "Не удалось открыть файл: ${e.localizedMessage}",
-                                Toast.LENGTH_LONG
+                                String.format(FAILED_TO_OPEN_FILE, e.localizedMessage),
+                                Toast.LENGTH_SHORT
                             ).show()
                         }
                     }
@@ -239,7 +248,7 @@ class MainActivity : ComponentActivity() {
         if (backPressedTime + doubleBackPressedInterval > System.currentTimeMillis()) {
             finish()
         } else {
-            Toast.makeText(this, "Нажмите ещё раз для выхода", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, PRESS_AGAIN_TO_EXIT, Toast.LENGTH_SHORT).show()
             backPressedTime = System.currentTimeMillis()
         }
     }
@@ -394,11 +403,11 @@ fun LotusApp(
                                 modifier = Modifier.padding(horizontal = 8.dp)
                             ) {
                                 ListItem(
-                                    headlineContent = { Text("Загрузка и отправка") },
+                                    headlineContent = { Text(stringResource(R.string.loading_and_sending)) },
                                     supportingContent = {
                                         Column {
                                             Text(
-                                                text = "Экспорт, импорт и отправка заметок",
+                                                text = stringResource(R.string.export_import_and_send_notes),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -424,11 +433,11 @@ fun LotusApp(
                                                                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                                                 context.startActivity(intent)
                                                             } catch (e: Exception) {
-                                                                Log.e("FileManagement", "Ошибка при открытии директории", e)
+                                                              
                                                             }
                                                         }
                                                     },
-                                                    label = { Text("Хранилище") },
+                                                    label = { Text(stringResource(R.string.storage)) },
                                                     leadingIcon = {
                                                         Icon(
                                                             Icons.Default.FolderOpen,
@@ -444,7 +453,7 @@ fun LotusApp(
                                     leadingContent = {
                                         Icon(
                                             Icons.Default.SwapHoriz,
-                                            contentDescription = "Загрузка и отправка",
+                                            contentDescription = stringResource(R.string.loading_and_sending),
                                             tint = MaterialTheme.colorScheme.primary
                                         )
                                     },
@@ -467,11 +476,11 @@ fun LotusApp(
                             modifier = Modifier.padding(horizontal = 8.dp)
                         ) {
                             ListItem(
-                                headlineContent = { Text("Корзина") },
+                                headlineContent = { Text(stringResource(R.string.trash)) },
                                 leadingContent = {
                                     Icon(
                                         Icons.Default.Delete,
-                                        contentDescription = "Корзина",
+                                        contentDescription = stringResource(R.string.trash),
                                         tint = if (isTrashOverLimit) MaterialTheme.colorScheme.error 
                                               else MaterialTheme.colorScheme.primary
                                     )
@@ -507,38 +516,14 @@ fun LotusApp(
                             modifier = Modifier.padding(horizontal = 8.dp)
                         ) {
                             ListItem(
-                                headlineContent = { 
-                                    Text(
-                                        "Использование памяти",
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                },
+                                headlineContent = { Text(stringResource(R.string.settings)) },
                                 supportingContent = {
-                                    Column {
-                                        val notesSize = viewModel.totalNotesSize.collectAsState().value
-                                        val memoryUsage = viewModel.appMemoryUsage.collectAsState().value
-                                        Text(
-                                            text = "Заметки: " + when {
-                                                notesSize < 1024 -> "$notesSize B"
-                                                notesSize < 1024 * 1024 -> String.format("%.1f KB", notesSize / 1024.0)
-                                                else -> String.format("%.1f MB", notesSize / (1024.0 * 1024.0))
-                                            },
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        Text(
-                                            text = "ОЗУ: " + when {
-                                                memoryUsage < 1024 -> "$memoryUsage B"
-                                                memoryUsage < 1024 * 1024 -> String.format("%.1f KB", memoryUsage / 1024.0)
-                                                else -> String.format("%.1f MB", memoryUsage / (1024.0 * 1024.0))
-                                            },
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
+                                    // Удаляем информацию о ОЗУ и размере заметок
                                 },
                                 leadingContent = {
                                     Icon(
                                         Icons.Default.Memory,
-                                        contentDescription = "Использование памяти",
+                                        contentDescription = stringResource(R.string.settings),
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 },
@@ -578,7 +563,7 @@ fun LotusApp(
                                         } else MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        "Beta v1.0",
+                                        "v1.0.0",
                                         style = MaterialTheme.typography.labelMedium.copy(
                                             fontSize = MaterialTheme.typography.labelSmall.fontSize * 0.9
                                         ),
@@ -601,7 +586,7 @@ fun LotusApp(
                                 }) {
                                     Icon(
                                         painter = painterResource(id = R.drawable.menu_24px),
-                                        contentDescription = "Меню",
+                                        contentDescription = stringResource(R.string.menu),
                                         tint = if (useClassicTheme) {
                                             if (darkTheme) Color.White else Color.Black
                                         } else MaterialTheme.colorScheme.onSurface
@@ -612,7 +597,7 @@ fun LotusApp(
                                 IconButton(onClick = { showFontSizeDialog = true }) {
                                     Icon(
                                         painter = painterResource(id = R.drawable.format_size_24px),
-                                        contentDescription = "Размер шрифта",
+                                        contentDescription = stringResource(R.string.font_size),
                                         tint = if (useClassicTheme) {
                                             if (darkTheme) classic_dark_secondary else classic_light_secondary
                                         } else MaterialTheme.colorScheme.onSurface
@@ -621,7 +606,7 @@ fun LotusApp(
                                 IconButton(onClick = { showSearchDialog = true }) {
                                     Icon(
                                         painter = painterResource(id = R.drawable.search_24px),
-                                        contentDescription = "Поиск",
+                                        contentDescription = stringResource(R.string.search),
                                         tint = if (useClassicTheme) {
                                             if (darkTheme) classic_dark_secondary else classic_light_secondary
                                         } else MaterialTheme.colorScheme.onSurface
@@ -635,7 +620,7 @@ fun LotusApp(
                                         ) {
                                             Icon(
                                                 painter = painterResource(id = R.drawable.history_24px),
-                                                contentDescription = "История версий",
+                                                contentDescription = stringResource(R.string.version_history),
                                                 tint = if (useClassicTheme) {
                                                     if (darkTheme) classic_dark_secondary else classic_light_secondary
                                                 } else {
@@ -658,7 +643,7 @@ fun LotusApp(
                                 ) {
                                     Icon(
                                         painter = painterResource(id = R.drawable.clear_24px),
-                                        contentDescription = "Удалить заметку",
+                                        contentDescription = stringResource(R.string.delete_note),
                                         modifier = Modifier.size(20.dp),
                                         tint = if (useClassicTheme) {
                                             if (darkTheme) classic_dark_secondary else classic_light_secondary
@@ -670,7 +655,7 @@ fun LotusApp(
                                 }) {
                                     Icon(
                                         painter = painterResource(id = R.drawable.add_24),
-                                        contentDescription = "Новая заметка",
+                                        contentDescription = stringResource(R.string.new_note),
                                         tint = if (useClassicTheme) {
                                             if (darkTheme) classic_dark_secondary else classic_light_secondary
                                         } else MaterialTheme.colorScheme.onSurface
@@ -838,5 +823,13 @@ fun LotusApp(
             },
             onDismiss = { showFontSizeDialog = false }
         )
+    }
+}
+
+@Composable
+private fun LogThemeChange(darkTheme: Boolean) {
+    val themeText = stringResource(R.string.current_theme, darkTheme)
+    LaunchedEffect(darkTheme) {
+        Log.d("MainActivity", themeText)
     }
 }

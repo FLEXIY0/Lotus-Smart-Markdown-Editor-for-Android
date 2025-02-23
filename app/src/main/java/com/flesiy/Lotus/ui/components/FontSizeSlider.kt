@@ -5,7 +5,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.flesiy.Lotus.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -19,7 +21,7 @@ fun FontSizeSlider(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Размер шрифта: ${value.toInt()}",
+            text = stringResource(R.string.font_size_setting) + ": ${value.toInt()}",
             style = MaterialTheme.typography.bodyMedium
         )
         Spacer(modifier = Modifier.height(8.dp))

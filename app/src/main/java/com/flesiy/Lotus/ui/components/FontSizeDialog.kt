@@ -6,7 +6,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.flesiy.Lotus.R
 
 @Composable
 fun FontSizeDialog(
@@ -22,13 +24,13 @@ fun FontSizeDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Настройки") },
+        title = { Text(stringResource(R.string.font_size_dialog_title)) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("Размер шрифта")
+                Text(stringResource(R.string.font_size_setting))
                 FontSizeSlider(
                     value = tempSize,
                     onValueChange = { tempSize = it }
@@ -39,7 +41,7 @@ fun FontSizeDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Тёмная тема")
+                    Text(if (tempIsDarkTheme) stringResource(R.string.dark_theme) else stringResource(R.string.light_theme))
                     Switch(
                         checked = tempIsDarkTheme,
                         onCheckedChange = { isChecked -> 
@@ -58,12 +60,12 @@ fun FontSizeDialog(
                     onDismiss()
                 }
             ) {
-                Text("Применить")
+                Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Отмена")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

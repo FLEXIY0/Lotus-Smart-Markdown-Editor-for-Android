@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import android.content.SharedPreferences
+import android.util.Log
+import kotlinx.coroutines.launch
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -25,6 +27,7 @@ class UserPreferences(private val context: Context) {
     private val SELECTED_MODEL = stringPreferencesKey("selected_model")
     private val TEXT_ALPHA = floatPreferencesKey("text_alpha")
     private val IS_VERSION_CONTROL_ENABLED = booleanPreferencesKey("is_version_control_enabled")
+    private val IS_ENGLISH_ENABLED = booleanPreferencesKey("is_english_enabled")
     private val sharedPreferences: SharedPreferences = context.getSharedPreferences("user_preferences", Context.MODE_PRIVATE)
 
     val skipDeleteConfirmation: Flow<Boolean> = context.dataStore.data
@@ -196,6 +199,20 @@ class UserPreferences(private val context: Context) {
     suspend fun setVersionControlEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[IS_VERSION_CONTROL_ENABLED] = enabled
+        }
+    }
+
+    val isEnglishEnabled: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            val enabled = preferences[IS_ENGLISH_ENABLED] ?: false
+            Log.d("UserPreferences", "Loaded English enabled: $enabled")
+            enabled
+        }
+
+    suspend fun setEnglishEnabled(enabled: Boolean) {
+        Log.d("UserPreferences", "Setting English enabled: $enabled")
+        context.dataStore.edit { preferences ->
+            preferences[IS_ENGLISH_ENABLED] = enabled
         }
     }
 } 
