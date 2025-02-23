@@ -218,6 +218,7 @@ fun MarkdownPreview(
     val context = LocalContext.current
     val markwon = remember { createMarkwon(context) }
     val textColor = MaterialTheme.colorScheme.onSurface
+    val primaryColor = MaterialTheme.colorScheme.primary
     val viewModel = context.findActivity()?.let { ViewModelProvider(it)[MainViewModel::class.java] }
     val rawAlpha = viewModel?.textAlpha?.collectAsState()?.value ?: 1f
     // Округляем до фиксированных значений (шаг 0.1)
@@ -231,12 +232,18 @@ fun MarkdownPreview(
                     movementMethod = CheckboxClickHandler(content, onContentChange)
                     markwon.setMarkdown(this, content)
                     setTextColor(textColor.copy(alpha = textAlpha).toArgb())
+                    // Устанавливаем цвет выделения текста
+                    highlightColor = primaryColor.copy(alpha = 0.4f).toArgb()
+                    textSelectHandle?.setTint(primaryColor.toArgb())
+                    textSelectHandleLeft?.setTint(primaryColor.toArgb())
+                    textSelectHandleRight?.setTint(primaryColor.toArgb())
                 }
             },
             update = { textView ->
                 textView.textSize = fontSize
                 textView.movementMethod = CheckboxClickHandler(content, onContentChange)
                 textView.setTextColor(textColor.copy(alpha = textAlpha).toArgb())
+                textView.highlightColor = primaryColor.copy(alpha = 0.4f).toArgb()
                 markwon.setMarkdown(textView, content)
             }
         )

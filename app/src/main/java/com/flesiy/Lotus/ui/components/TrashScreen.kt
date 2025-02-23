@@ -89,6 +89,7 @@ fun TrashScreen(
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
             }
 
+            /*
             // Секция кеша
             item {
                 Card(
@@ -185,6 +186,7 @@ fun TrashScreen(
                     }
                 }
             }
+            */
 
             if (notes.isEmpty()) {
                 item {

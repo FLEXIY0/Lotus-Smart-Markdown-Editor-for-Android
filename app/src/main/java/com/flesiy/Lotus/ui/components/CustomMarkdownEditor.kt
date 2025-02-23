@@ -250,12 +250,18 @@ fun CustomMarkdownEditor(
                 onEditorCreated?.invoke(editor)
                 editor.setTextColor(if (isDarkTheme) Color.WHITE else Color.BLACK)
                 editor.setHintTextColor(if (isDarkTheme) Color.GRAY else Color.DKGRAY)
+                // Устанавливаем цвет выделения текста
+                editor.highlightColor = primaryColor.and(0x40FFFFFF)
+                editor.textSelectHandle?.setTint(primaryColor)
+                editor.textSelectHandleLeft?.setTint(primaryColor)
+                editor.textSelectHandleRight?.setTint(primaryColor)
             }
         },
         update = { editText ->
             editText.textSize = fontSize
             editText.setTextColor(if (isDarkTheme) Color.WHITE else Color.BLACK)
             editText.setHintTextColor(if (isDarkTheme) Color.GRAY else Color.DKGRAY)
+            editText.highlightColor = primaryColor.and(0x40FFFFFF)
             if (value != editText.text.toString()) {
                 val newText = SpannableStringBuilder(value)
                 editText.text = newText
